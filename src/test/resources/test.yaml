@@ -1,0 +1,11 @@
+$KEY.key1:
+  dataType: "string"
+  excelType: "string"
+
+$KEY.key2:
+  dataType: "double"
+  excelType: "number"
+
+$KEY.key3:
+  dataType: "long"
+  excelType: "date"
