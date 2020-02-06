@@ -40,6 +40,23 @@ commands:
             - ~/.m2
           key: v1-dependencies--{{ checksum "build.sbt" }}
 
+  publish:
+    description: Compiles and publishes to cloudsmith
+    parameters:
+      cloudsmith-repo:
+        type: string
+    steps:
+      - run:
+          name: Set env var
+          command: echo 'export CLOUDSMITH_REPO="<< parameters.cloudsmith-repo >>"' >> $BASH_ENV
+      - compile
+      - run:
+          name: Package
+          command: sbt package
+      - run:
+          name: Publish to cloudsmith
+          command: sbt publish
+
 jobs:
   tests:
     executor: scala-executor
@@ -49,17 +66,18 @@ jobs:
       - run:
           name: Run tests
           command: sbt test
-  publish:
+  publish-snapshot:
     executor: scala-executor
     steps:
       - checkout
-      - compile
-      - run:
-          name: Package
-          command: sbt package
-      - run:
-          name: Publish to cloudsmith
-          command: sbt publish
+      - publish:
+          cloudsmith-repo: https://maven.cloudsmith.io/carta/maven-snapshots
+  publish-release:
+    executor: scala-executor
+    steps:
+      - checkout
+      - publish:
+          cloudsmith-repo: https://maven.cloudsmith.io/carta/maven-releases
 
 workflows:
   branch:
@@ -69,7 +87,7 @@ workflows:
       - authorize-publish:
           type: approval
           <<: *ignore-master-filter
-      - publish:
+      - publish-snapshot:
           <<: *ignore-master-filter
           context: org-Global
           requires:
@@ -83,7 +101,7 @@ workflows:
       - authorize-publish:
           type: approval
           <<: *only-master-filter
-      - publish:
+      - publish-release:
           <<: *only-master-filter
           context: org-Global
           requires:
