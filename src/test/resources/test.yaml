@@ -1,0 +1,9 @@
+key1:
+  keyType: "single"
+  columnType: "double"
+  excelType: "double"
+
+key2:
+  keyType: "repeated"
+  columnType: "long"
+  excelType: "date"
