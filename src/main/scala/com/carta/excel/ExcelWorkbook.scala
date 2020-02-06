@@ -1,9 +1,8 @@
-package exporters.report.utils
+package com.carta.excel
 
-import java.io.{Closeable, IOException, InputStream, OutputStream}
+import java.io.{Closeable, InputStream, OutputStream}
 import java.util.Date
 
-import main.{CellDate, CellDouble, CellString, ExportModelUtils}
 import org.apache.poi.ss.usermodel.{CellStyle, CellType}
 import org.apache.poi.xssf.streaming.{SXSSFCell, SXSSFRow, SXSSFSheet, SXSSFWorkbook}
 import org.apache.poi.xssf.usermodel.{XSSFCell, XSSFRow, XSSFSheet, XSSFWorkbook}
@@ -12,7 +11,7 @@ import scala.collection.{immutable, mutable}
 import scala.util.{Failure, Success, Try}
 
 /*
- * ExcelWorkbook is an excel generation class that wraps the Java Apache POI library. Its inputs are a set of template workbooks to read from
+ * ExcelWorkbook is an com.carta.excel generation class that wraps the Java Apache POI library. Its inputs are a set of template workbooks to read from
  * and the buffer window size which is used to stream writes to the output workbook.
  *
  * For information on modifying formatting, styling, or contents of the final output workbook, see the wiki here:

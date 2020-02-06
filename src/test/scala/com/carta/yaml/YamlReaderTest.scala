@@ -1,14 +1,14 @@
-package yaml
+package com.carta.yaml
 
 import java.io.File
 
-import com.carta.exscalabur.UnitSpec
+import com.carta.UnitSpec
 
 import scala.collection.mutable.Stack
 
 class YamlReaderSpec extends UnitSpec {
 
-  "YAML Reader" should "Produce KeyObject from yaml file as resource" in {
+  "YAML Reader" should "Produce KeyObject from com.carta.yaml file as resource" in {
     val yamlReader = new YamlReader()
     val keyObjects = yamlReader.parse("test.yaml")
 
@@ -43,7 +43,7 @@ class YamlReaderSpec extends UnitSpec {
     actualKey2Obj shouldBe expectedKey2Obj
   }
 
-  it should "Produce KeyObject from yaml file as File" in {
+  it should "Produce KeyObject from com.carta.yaml file as File" in {
     val yamlReader = new YamlReader()
     val yamlFile = new File(getClass.getClassLoader.getResource("test.yaml").toURI)
     val keyObjects = yamlReader.parse(yamlFile)
