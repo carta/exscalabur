@@ -1,4 +1,4 @@
-package yaml
+package com.carta.yaml
 
 import com.fasterxml.jackson.core.`type`.TypeReference
 
