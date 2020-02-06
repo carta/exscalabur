@@ -1,3 +1,5 @@
+.DS_STORE
+
 target/
 .idea/
 project/target
