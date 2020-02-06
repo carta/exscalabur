@@ -8,7 +8,7 @@ import scala.collection.mutable.Stack
 
 class YamlReaderSpec extends UnitSpec {
 
-  "YAML Reader" should "Produce KeyObject from com.carta.yaml file as resource" in {
+  "YAML Reader" should "Produce KeyObject from yaml file as resource" in {
     val yamlReader = new YamlReader()
     val keyObjects = yamlReader.parse("test.yaml")
 

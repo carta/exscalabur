@@ -11,7 +11,7 @@ import scala.collection.{immutable, mutable}
 import scala.util.{Failure, Success, Try}
 
 /*
- * ExcelWorkbook is an com.carta.excel generation class that wraps the Java Apache POI library. Its inputs are a set of template workbooks to read from
+ * ExcelWorkbook is an excel generation class that wraps the Java Apache POI library. Its inputs are a set of template workbooks to read from
  * and the buffer window size which is used to stream writes to the output workbook.
  *
  * For information on modifying formatting, styling, or contents of the final output workbook, see the wiki here:

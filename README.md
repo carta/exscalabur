@@ -1,5 +1,5 @@
 # Exscalabur
-A scala package for generating com.carta.excel exports from a com.carta.excel template and JSON input.
+A scala package for generating excel exports from an excel template and JSON input.
 
 ## Development
 1. `brew install sbt`
