@@ -23,11 +23,10 @@ executors:
       JVM_OPTS: -Xmx3200m
       TERM: dumb
 
-jobs:
-  tests:
-    executor: scala-executor
+commands:
+  compile:
+    description: Compiles
     steps:
-      - checkout
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "build.sbt" }}
@@ -40,9 +39,27 @@ jobs:
           paths:
             - ~/.m2
           key: v1-dependencies--{{ checksum "build.sbt" }}
+
+jobs:
+  tests:
+    executor: scala-executor
+    steps:
+      - checkout
+      - compile
       - run:
           name: Run tests
           command: sbt test
+  publish:
+    executor: scala-executor
+    steps:
+      - checkout
+      - compile
+      - run:
+          name: Package
+          command: sbt package
+      - run:
+          name: Publish to cloudsmith
+          command: sbt publish
 
 workflows:
   branch:
@@ -54,3 +71,12 @@ workflows:
     jobs:
       - tests:
           <<: *only-master-filter
+      - authorize-publish:
+          type: approval
+          <<: *only-master-filter
+      - publish:
+          <<: *only-master-filter
+          context: org-Global
+          requires:
+            - authorize-publish
+            - tests
