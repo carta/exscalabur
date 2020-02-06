@@ -1,17 +1,20 @@
 import sbt.Keys.libraryDependencies
 
 name := "Exscalabur"
-organization := "com.carta"
-version := "0.0.1"
+organization := "carta"
 
-scalaVersion := "2.13.1"
+version := "0.1"
+
+scalaVersion := "2.12.8"
 
 libraryDependencies ++= Seq(
+  "org.scalatest" %% "scalatest" % "3.1.0" % "test",
+  "org.scalactic" %% "scalactic" % "3.1.0",
   "org.apache.poi" % "poi" % "4.1.0",
   "org.apache.poi" % "poi-ooxml" % "4.1.0",
   "com.fasterxml.jackson.core" % "jackson-databind" % "2.10.2",
   "com.fasterxml.jackson.dataformat" % "jackson-dataformat-yaml" % "2.10.2",
   "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.10.2",
-  "org.scalactic" %% "scalactic" % "3.1.0",
-  "org.scalatest" %% "scalatest" % "3.1.0" % "test",
-)
+  // resource.managed
+  "com.jsuereth" % "scala-arm_2.12" % "2.0"
+  )
