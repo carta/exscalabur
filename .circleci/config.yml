@@ -23,11 +23,10 @@ executors:
       JVM_OPTS: -Xmx3200m
       TERM: dumb
 
-jobs:
-  tests:
-    executor: scala-executor
+commands:
+  compile:
+    description: Compiles
     steps:
-      - checkout
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "build.sbt" }}
@@ -40,17 +39,71 @@ jobs:
           paths:
             - ~/.m2
           key: v1-dependencies--{{ checksum "build.sbt" }}
+
+  publish:
+    description: Compiles and publishes to cloudsmith
+    parameters:
+      cloudsmith-repo:
+        type: string
+    steps:
+      - run:
+          name: Set env var
+          command: echo 'export CLOUDSMITH_REPO="<< parameters.cloudsmith-repo >>"' >> $BASH_ENV
+      - compile
+      - run:
+          name: Package
+          command: sbt package
+      - run:
+          name: Publish to cloudsmith
+          command: sbt publish
+
+jobs:
+  tests:
+    executor: scala-executor
+    steps:
+      - checkout
+      - compile
       - run:
           name: Run tests
           command: sbt test
+  publish-snapshot:
+    executor: scala-executor
+    steps:
+      - checkout
+      - publish:
+          cloudsmith-repo: https://maven.cloudsmith.io/carta/maven-snapshots
+  publish-release:
+    executor: scala-executor
+    steps:
+      - checkout
+      - publish:
+          cloudsmith-repo: https://maven.cloudsmith.io/carta/maven-releases
 
 workflows:
   branch:
     jobs:
       - tests:
           <<: *ignore-master-filter
+      - authorize-publish:
+          type: approval
+          <<: *ignore-master-filter
+      - publish-snapshot:
+          <<: *ignore-master-filter
+          context: org-Global
+          requires:
+            - authorize-publish
+            - tests
 
   master:
     jobs:
       - tests:
           <<: *only-master-filter
+      - authorize-publish:
+          type: approval
+          <<: *only-master-filter
+      - publish-release:
+          <<: *only-master-filter
+          context: org-Global
+          requires:
+            - authorize-publish
+            - tests

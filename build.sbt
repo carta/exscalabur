@@ -1,11 +1,21 @@
 import sbt.Keys.libraryDependencies
 
-name := "Exscalabur"
-organization := "carta"
 
-version := "0.1"
+organization := "com.carta"
+organizationName := "carta"
 
+version := "0.0.1"
 scalaVersion := "2.12.8"
+
+name := "Exscalabur"
+publishTo := { Some("Cloudsmith API" at sys.env.get("CLOUDSMITH_REPO").getOrElse("https://maven.cloudsmith.io/carta/maven-snapshots")) }
+
+credentials += Credentials(
+  "Cloudsmith API",
+  "maven.cloudsmith.io",
+  "token",
+  sys.env.get("CLOUDSMITH_API_KEY").getOrElse("")
+)
 
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.1.0" % "test",
