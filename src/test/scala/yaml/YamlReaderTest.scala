@@ -45,7 +45,7 @@ class YamlReaderSpec extends UnitSpec {
     actualKey2Obj shouldBe expectedKey2Obj
   }
 
-  "YAML Reader" should "Produce KeyObject from yaml file as File" in {
+  it should "Produce KeyObject from yaml file as File" in {
     val yamlReader = new YamlReader()
     val yamlFile = new File(getClass.getClassLoader.getResource("test.yaml").toURI)
     val keyObjects = yamlReader.parse(yamlFile)
