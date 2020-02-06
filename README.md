@@ -12,8 +12,8 @@ A scala package for generating excel exports from a excel template and JSON inpu
 | `~compile` | `~` enables hot reloading |
 | `~run` | `~` enables hot reloading |
 | `test` | Runs all tests |
-| `test-quick` | Runs tests only affected by your latest code changes |
+| `testQuick` | Runs tests only affected by your latest code changes |
 | `clean` | Removes generated files from the target directory |
 | `update` | Updates external dependencies |
 | `package` | Creates JAR |
-| `publish-local` | Publishes to local IVY repository, by default in `${user.home}/.ivy2/local`
+| `publishLocal` | Publishes to local IVY repository, by default in `~/.ivy2/local`
