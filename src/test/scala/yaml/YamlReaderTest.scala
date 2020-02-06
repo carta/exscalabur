@@ -14,7 +14,6 @@ class YamlReaderSpec extends UnitSpec {
 
     val expectedKey1Obj = KeyObject(
       key = "key1",
-      columnName = "numberColumn",
       keyType = KeyType.single,
       columnType = CellType.double,
       excelType = CellType.double
@@ -22,7 +21,6 @@ class YamlReaderSpec extends UnitSpec {
 
     val expectedKey2Obj = KeyObject(
       key = "key2",
-      columnName = "date",
       keyType = KeyType.repeated,
       columnType = CellType.long,
       excelType = CellType.date
@@ -52,7 +50,6 @@ class YamlReaderSpec extends UnitSpec {
 
     val expectedKey1Obj = KeyObject(
       key = "key1",
-      columnName = "numberColumn",
       keyType = KeyType.single,
       columnType = CellType.double,
       excelType = CellType.double
@@ -60,7 +57,6 @@ class YamlReaderSpec extends UnitSpec {
 
     val expectedKey2Obj = KeyObject(
       key = "key2",
-      columnName = "date",
       keyType = KeyType.repeated,
       columnType = CellType.long,
       excelType = CellType.date
