@@ -3,3 +3,5 @@
 target/
 .idea/
 project/target
+*.iml
+~*.xlsx
