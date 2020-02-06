@@ -1,3 +1,7 @@
+[![CircleCI](https://circleci.com/gh/carta/exscalabur/tree/master.svg?style=svg)](https://circleci.com/gh/carta/exscalabur/tree/master)
+[![Scala version](https://img.shields.io/badge/scala-2.12.8-brightgreen.svg)](https://www.scala-lang.org/download/2.12.8.html)
+[![Latest Version @ Cloudsmith](https://api-prd.cloudsmith.io/badges/version/carta/maven-releases/maven/exscalabur_2.12/latest/xg=com.carta/?render=true&badge_token=gAAAAABePJwL9tZMOa6DrXC6N_iGkYROA2I1jTSwarIRvAuhy7O34Tt742-doost6rUHEs5WR2PqRoxjGCihc1v0mCeHIeVY_hSi6-wyPttrjUAFaGPmXMU%3D)](https://cloudsmith.io/~carta/repos/maven-releases/packages/detail/maven/exscalabur_2.12/latest/xg=com.carta/)
+
 # Exscalabur
 A scala package for generating excel exports from an excel template and JSON input.
 
