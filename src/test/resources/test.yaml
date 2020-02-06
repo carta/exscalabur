@@ -1,0 +1,11 @@
+key1:
+  keyType: "single"
+  columnName: "numberColumn"
+  columnType: "double"
+  excelType: "double"
+
+key2:
+  keyType: "repeated"
+  columnName: "date"
+  columnType: "long"
+  excelType: "date"
