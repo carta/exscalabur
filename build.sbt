@@ -1,4 +1,4 @@
-name := "untitled"
+name := "Exscalabur"
 
 version := "0.1"
 
