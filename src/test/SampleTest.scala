@@ -1,6 +1,6 @@
-import collection.mutable.Stack
-import org.scalatest._
-import com.carta.exscalabur.UnitSpec
+package test
+
+import scala.collection.mutable.Stack
 
 class StackSpec extends UnitSpec {
 
