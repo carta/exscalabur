@@ -48,7 +48,7 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
     // flexible with what templates we want to load into memory via the XSSF api.
     val templateWorkbook: XSSFWorkbook = excelTemplateWorkbooks(templateName)
     val templateSheets: immutable.Seq[XSSFSheet] = (0 until templateWorkbook.getNumberOfSheets())
-        .map(templateWorkbook.getSheetAt(_))
+      .map(templateWorkbook.getSheetAt(_))
 
     templateSheets.map { templateSheet =>
       val sheetName = templateSheet.getSheetName()
@@ -56,7 +56,10 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
       val outputSheet: SXSSFSheet = outputExcelWorkbook.createSheet(sheetName)
 
       copyAndSubstitute(templateSheet, outputSheet, substitutionMap, sheetName)
-    }
+    }.filter(repeatedRowIndex => repeatedRowIndex match {
+      case (_, None) => false
+      case _ => true
+    })
   }
 
   private def copyAndSubstitute(templateSheet: XSSFSheet, outputSheet: SXSSFSheet, substitutionMap: ModelMap, sheetName: String): (String, Option[Int]) = {

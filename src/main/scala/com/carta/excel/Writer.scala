@@ -29,12 +29,12 @@ object Writer {
     workbook.copyAndSubstitute("template1", ExportModelUtils.getModelMap(12L))
 
     val repeatedRowIndices = workbook.copyAndSubstitute("template2", ExportModelUtils.getModelMap(24L))
-    writeRepeatedTabFuture(
-      tabName = repeatedRowIndices(0)._1,
-      repeatedRowIndex = repeatedRowIndices(0)._2,
+    repeatedRowIndices.foreach((tabName, repeatedRowIndex) => writeRepeatedTabFuture(
+      tabName = tabName,
+      repeatedRowIndex = repeatedRowIndex,
       workbook = workbook,
       templateName = "template2",
-      substitutionMaps = List("a", "b", "c").map(ExportModelUtils.getModelMap))
+      substitutionMaps = List("a", "b", "c").map(ExportModelUtils.getModelMap)))
 
     // Writes the final workbook to the FileOutputStream with the given pathname, and then closes both the workbook and FileOutputStream
     workbook.write(fos)
