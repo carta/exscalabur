@@ -42,6 +42,12 @@ showVersion := {
   println(version.value)
 }
 
+lazy val nextVersion = taskKey[Unit]("Show next version")
+nextVersion := {
+  val predicted = Version(version.value).map(_.bump(releaseVersionBump.value).asSnapshot.string).getOrElse(versionFormatError(version.value));
+  println(predicted)
+}
+
 git.useGitDescribe := true
 git.formattedShaVersion := git.gitHeadCommit.value map { sha => s"v$sha" }
 

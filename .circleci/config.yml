@@ -40,13 +40,6 @@ commands:
             - ~/.m2
           key: v1-dependencies--{{ checksum "build.sbt" }}
 
-  publish:
-    description: Tag and release to cloudsmith
-    steps:
-      - run:
-          name: Publish to cloudsmith
-          command: sbt release with-defaults
-
 jobs:
   tests:
     executor: scala-executor
@@ -56,31 +49,19 @@ jobs:
       - run:
           name: Run tests
           command: sbt test
-  publish-snapshot:
-    executor: scala-executor
-    steps:
-      - checkout
-      - publish
   publish-release:
     executor: scala-executor
     steps:
       - checkout
-      - publish
+      - run:
+          name: Release to cloudsmith
+          command: sbt release with-defaults
 
 workflows:
   branch:
     jobs:
       - tests:
           <<: *ignore-master-filter
-      - authorize-publish:
-          type: approval
-          <<: *ignore-master-filter
-      - publish-snapshot:
-          <<: *ignore-master-filter
-          context: org-Global
-          requires:
-            - authorize-publish
-            - tests
 
   master:
     jobs:
