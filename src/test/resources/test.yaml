@@ -1,3 +1,8 @@
+$KEY.number:
+  keyType: "single"
+  columnType: "long"
+  excelType: "double"
+
 $REP.numbers:
   keyType: "repeated"
   columnType: "long"

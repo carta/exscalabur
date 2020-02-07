@@ -3,17 +3,12 @@ package com.carta.excel
 import java.time.Instant
 import java.util.Date
 
+// TODO: Inline or rename or something
 object ExportModelUtils {
   val SUBSTITUTION_KEY = "$KEY"
   val REPEATED_FIELD_KEY = "$REP"
 
   type ModelMap = Map[String, CellValue]
-
-  def getModelMap(number: Long): ModelMap = {
-    Map(
-      (s"${SUBSTITUTION_KEY}.number" -> toCellDoubleFromLong(number))
-      )
-  }
 
   def toCellStringFromString(string: String): CellString = CellString(string)
 
