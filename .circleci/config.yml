@@ -87,7 +87,6 @@ workflows:
           context: org-Global
           requires:
             - authorize-publish
-            - tests
 
   master:
     jobs:
