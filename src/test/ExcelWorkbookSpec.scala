@@ -1,16 +1,18 @@
-package com.carta.excel
+package test
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 
+import main.{CellDouble, CellString, ExportModelUtils}
 import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.xssf.usermodel.{XSSFCell, XSSFRow, XSSFSheet, XSSFWorkbook}
 import org.scalatest.{FlatSpec, Matchers}
-import com.carta.excel.ExcelTestHelpers.writeOutputAndVerify
+import test.ExcelTestHelpers._
+
+import scala.collection.immutable
 import scala.util.Random
 import resource.managed
-import com.carta.UnitSpec
 
-class ExcelWorkbookSpec extends UnitSpec {
+class ExcelWorkbookSpec extends FlatSpec with Matchers {
   "ExcelWorkbook" should "copy cellStyles from template workbook to output workbook" in {
     val templateName = "cellStyles"
     val templateStream: ByteArrayOutputStream = new ByteArrayOutputStream()

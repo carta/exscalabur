@@ -4,9 +4,9 @@ import com.carta.temp.{DataRow, Exscalabur}
 
 object Main extends App {
   val sword = new Exscalabur(
-    "/Users/katiedsouza/Desktop/exscalabur.xlsx",
-    "/Users/katiedsouza/Developer/exscalabur/src/test/resources/test.yaml"
-  )
+    "/tmp/exscalabur.xlsx",
+    "/Users/daviddufour/code/hackathon/exscalabur/src/test/resources/test.yaml"
+    )
 
   val row1 = DataRow.Builder()
     .addCell("string", "foo")
@@ -27,8 +27,21 @@ object Main extends App {
     .build()
 
   sword.addTab(
+    "tab1_name",
+    "/Users/daviddufour/code/hackathon/exscalabur/src/resources/templates/tab1_template.xlsx",
+    DataRow.Builder()
+           .addCell("number", 12)
+           .build(),
+    List()
+    )
+  sword.addTab(
     "tab2_name",
-    "/Users/katiedsouza/Developer/exscalabur/src/resources/templates/tab2_template.xlsx",
+    "/Users/daviddufour/code/hackathon/exscalabur/src/resources/templates/tab2_template.xlsx",
+    DataRow.Builder()
+      .addCell("number", 24)
+      .build(),
     List(row1, row2, row3)
-  ).writeExcelToDisk()
+    )
+
+  sword.writeExcelToDisk()
 }

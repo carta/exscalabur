@@ -1,18 +1,20 @@
 package com.carta.excel
 
 import java.io.{FileInputStream, FileOutputStream}
+import java.util.UUID.randomUUID
 
 import com.carta.excel.ExportModelUtils.ModelMap
+import com.carta.excel.Writer.getModelMap
 import com.carta.temp.{CellType, DataRow, DoubleCellType, LongCellType, StringCellType}
 import com.carta.yaml.{CellType, KeyObject}
 import resource.{ManagedResource, managed}
 
-case class TabParam
-(tabType: TabType.Value,
- tabName: String,
- templatePath: String,
- tabData: List[DataRow],
- tabSchema: Map[String, KeyObject]) {
+
+case class TabParam(tabName: String,
+                    templatePath: String,
+                    tabData: DataRow,
+                    repeatedTabData: List[DataRow],
+                    tabSchema: Map[String, KeyObject]) {
   def toStreamTuple: (String, ManagedResource[FileInputStream]) = {
     (tabName, managed(new FileInputStream(templatePath)))
   }
@@ -31,14 +33,30 @@ object Writer {
     val workbook = new ExcelWorkbook(tabNameToStreamMap, windowSize)
     val fos = new FileOutputStream(filePath)
 
+    //    workbook.copyAndSubstitute("tab1_name", ExportModelUtils.getModelMap(12L))
+    //
+    //    val repeatedRowIndex = workbook.copyAndSubstitute("tab2_name", ExportModelUtils.getModelMap(24L))
+    //    writeRepeatedTabFuture(
+    //      repeatedRowIndex = repeatedRowIndex,
+    //      workbook = workbook,
+    //      tabName = "tabe2_name",
+    //      maps = List("a", "b", "c").map(ExportModelUtils.getModelMap))
+
+
     tabs.foreach {
-      case TabParam(TabType.single, tabName: String, _, tabData: List[DataRow], tabSchema: Map[String, KeyObject]) =>
-        workbook.copyAndSubstitute(tabName, getModelMap(tabSchema, tabData.head))
-      case TabParam(TabType.repeated, tabName: String, _, tabData: List[DataRow], tabSchema: Map[String, KeyObject]) =>
+      case TabParam(templateName: String,
+                    _,
+                    tabData: DataRow,
+                    repeatedTabData: List[DataRow],
+                    tabSchema: Map[String, KeyObject]) =>
         //TODO proper error handling on copyAndSubstitute
-        val startIndex = workbook.copyAndSubstitute(tabName).get
-        val modelMaps = tabData.map(rowData => getModelMap(tabSchema, rowData))
-        workbook.insertRows(tabName, startIndex, startIndex, modelMaps)
+        val startIndex = workbook.copyAndSubstitute(templateName, getModelMap(ExportModelUtils.SUBSTITUTION_KEY, tabSchema, tabData)).head
+        val modelMaps = repeatedTabData.map(rowData => getModelMap(ExportModelUtils.REPEATED_FIELD_KEY, tabSchema, rowData))
+        println(modelMaps)
+        startIndex._2 match {
+          case Some(index) => workbook.insertRows(templateName, index, startIndex._1, index, modelMaps)
+          case None =>
+        }
     }
 
     // Writes the final workbook to the FileOutputStream with the given pathname, and then closes both the workbook and FileOutputStream
@@ -47,9 +65,10 @@ object Writer {
     fos.close()
   }
 
-  private def getModelMap(tabSchema: Map[String, KeyObject], dataRow: DataRow): ModelMap = {
+  private def getModelMap(keyType: String, tabSchema: Map[String, KeyObject], dataRow: DataRow): ModelMap = {
     dataRow.data.map { case (key: String, value: CellType) =>
-      val newKey = s"${ExportModelUtils.REPEATED_FIELD_KEY}.$key"
+      println(tabSchema)
+      val newKey = s"${keyType}.$key"
       val newValue = tabSchema(newKey) match {
         // TODO different input output types
         case KeyObject(_, CellType.string, CellType.string) =>
@@ -64,4 +83,18 @@ object Writer {
       newKey -> newValue
     }
   }
+
+  //  private def writeRepeatedTabFuture(repeatedRowIndex: Option[Int], workbook: ExcelWorkbook, tabName: String, maps: List[ModelMap]): Int = {
+  //    repeatedRowIndex match {
+  //      case Some(startingIndex) =>
+  //        workbook.insertRows(tabName,
+  //                            startingIndex,
+  //                            startingIndex,
+  //                            maps) match {
+  //          case Success(value: Int) => value
+  //          case Failure(exception) => throw exception
+  //        }
+  //      case None => throw new Exception(s"No repeated row for tab $tabName")
+  //    }
+  //  }
 }
