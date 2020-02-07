@@ -4,7 +4,7 @@ import sbt.Keys.libraryDependencies
 organization := "com.carta"
 organizationName := "carta"
 
-version := "0.0.1"
+version := "0.0.2"
 scalaVersion := "2.12.8"
 
 name := "Exscalabur"

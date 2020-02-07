@@ -20,9 +20,15 @@ object Main extends App {
     .addCell("dates", 1580028273)
     .build()
 
+  val row3 = DataRow.Builder()
+    .addCell("string", "hello")
+    .addCell("numbers", 1337)
+    .addCell("dates", 1520028273)
+    .build()
+
   sword.addTab(
     "tab2_name",
     "/Users/katiedsouza/Developer/exscalabur/src/resources/templates/tab2_template.xlsx",
-    List(row1, row2)
+    List(row1, row2, row3)
   ).writeExcelToDisk()
 }
