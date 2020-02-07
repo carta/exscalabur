@@ -78,6 +78,8 @@ workflows:
     jobs:
       - tests:
           <<: *ignore-master-filter
+  publish-branch:
+    jobs:
       - authorize-publish:
           type: approval
           <<: *ignore-master-filter
@@ -86,7 +88,6 @@ workflows:
           context: org-Global
           requires:
             - authorize-publish
-            - tests
 
   master:
     jobs:

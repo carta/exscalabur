@@ -15,23 +15,16 @@ object ExportModelUtils {
       )
   }
 
-  def getModelMap(string: String): ModelMap = {
-    Map(
-      (s"${REPEATED_FIELD_KEY}.string" -> toCellStringFromString(string))
-    )
-  }
-
-  // to CellString Option converters
-  def toCellStringFromString(string: String) = CellString(string)
+  def toCellStringFromString(string: String): CellString = CellString(string)
 
   // to CellDouble Option converters
-  def toCellDoubleFromDouble(double: Double) = CellDouble(double)
+  def toCellDoubleFromDouble(double: Double): CellDouble = CellDouble(double)
 
-  def toCellDoubleFromLong(long: Long) = CellDouble(long.toDouble)
+  def toCellDoubleFromLong(long: Long): CellDouble = CellDouble(long.toDouble)
 
   // to CellDate Option converters
-  def toCellDateFromLong(epochMillis: Long) =
-    // epochMillis * hours * minutes * seconds * milliseconds
+  def toCellDateFromLong(epochMillis: Long): CellDate =
+  // epochMillis * hours * minutes * seconds * milliseconds
     CellDate(Date.from(Instant.ofEpochMilli(epochMillis * 24 * 60 * 60 * 1000)))
 
   def toCellDateFromTimestampMillis(epochMillis: Long, offsetSeconds: Long = 0): CellDate =
