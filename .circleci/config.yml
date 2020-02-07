@@ -71,7 +71,11 @@ jobs:
       - checkout
       - run:
           name: Publish to cloudsmith releases
-          command: sbt release with-defaults
+          command: |
+            git config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*
+            git config branch.master.remote origin
+            git config branch.master.merge refs/heads/master
+            sbt release with-defaults
 
 workflows:
   branch:

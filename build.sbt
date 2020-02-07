@@ -1,6 +1,7 @@
 import sbt.Keys.libraryDependencies
 import sbtrelease._
 import sbtrelease.ReleaseStateTransformations.{setReleaseVersion=>_,_}
+import ReleaseTransformations._
 
 
 organization := "com.carta"
@@ -52,18 +53,29 @@ git.useGitDescribe := true
 git.formattedShaVersion := git.gitHeadCommit.value map { sha => s"v$sha" }
 
 
-def setVersionOnly(selectVersion: Versions => String): ReleaseStep =  { st: State =>
-  val vs = st.get(ReleaseKeys.versions).getOrElse(sys.error("No versions are set! Was this release part executed before inquireVersions?"))
-  val selected = selectVersion(vs)
-
-  st.log.info("Setting version to '%s'." format selected)
-  val useGlobal =Project.extract(st).get(releaseUseGlobalVersion)
-  val versionStr = (if (useGlobal) globalVersionString else versionString) format selected
-
-  reapply(Seq(
-    if (useGlobal) version in ThisBuild := selected
-    else version := selected
-  ), st)
+releaseProcess := {
+  if (isSnapshot.value)
+    // Release without git steps
+    Seq[ReleaseStep](
+      checkSnapshotDependencies,
+      inquireVersions,
+      runTest,
+      setReleaseVersion,
+      publishArtifacts,
+      setNextVersion
+    )
+  else
+    Seq[ReleaseStep](
+      checkSnapshotDependencies,              // : ReleaseStep
+      inquireVersions,                        // : ReleaseStep
+      runClean,                               // : ReleaseStep
+      runTest,                                // : ReleaseStep
+      setReleaseVersion,                      // : ReleaseStep
+      commitReleaseVersion,                   // : ReleaseStep, performs the initial git checks
+      tagRelease,                             // : ReleaseStep
+      publishArtifacts,                       // : ReleaseStep, checks whether `publishTo` is properly set up
+      setNextVersion,                         // : ReleaseStep
+      commitNextVersion,                      // : ReleaseStep
+      pushChanges                             // : ReleaseStep, also checks that an upstream branch is properly configured
+    )
 }
-
-lazy val setReleaseVersion: ReleaseStep = setVersionOnly(_._1)
