@@ -5,10 +5,17 @@ organization := "com.carta"
 organizationName := "carta"
 
 version := "0.0.3"
+
 scalaVersion := "2.12.8"
 
 name := "Exscalabur"
-publishTo := { Some("Cloudsmith API" at sys.env.get("CLOUDSMITH_REPO").getOrElse("https://maven.cloudsmith.io/carta/maven-snapshots")) }
+publishTo := {
+  val baseUrl = "https://maven.cloudsmith.io/carta/";
+  if (isSnapshot.value)
+    Some("Cloudsmith API Snapshots" at baseUrl + "maven-snapshots")
+  else
+    Some("Cloudsmith API Releases" at baseUrl + "maven-releases")
+}
 
 credentials += Credentials(
   "Cloudsmith API",
