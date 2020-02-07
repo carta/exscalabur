@@ -1,9 +1,14 @@
-key1:
-  keyType: "single"
-  columnType: "double"
-  excelType: "double"
-
-key2:
+$REP.numbers:
   keyType: "repeated"
   columnType: "long"
-  excelType: "date"
+  excelType: "double"
+
+$REP.string:
+  keyType: "repeated"
+  columnType: "string"
+  excelType: "string"
+
+$REP.dates:
+  keyType: "repeated"
+  columnType: "long"
+  excelType: "double"

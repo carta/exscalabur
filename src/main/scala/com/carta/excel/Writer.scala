@@ -1,33 +1,45 @@
 package com.carta.excel
 
 import java.io.{FileInputStream, FileOutputStream}
-import java.util.UUID.randomUUID
 
-import com.carta.excel._
+import com.carta.excel.ExportModelUtils.ModelMap
+import com.carta.temp.{CellType, DataRow, DoubleCellType, LongCellType, StringCellType}
+import com.carta.yaml.{CellType, KeyObject}
 import resource.{ManagedResource, managed}
 
-import scala.util.{Failure, Success}
-
+case class TabParam
+(tabType: TabType.Value,
+ tabName: String,
+ templatePath: String,
+ tabData: List[DataRow],
+ tabSchema: Map[String, KeyObject]) {
+  def toStreamTuple: (String, ManagedResource[FileInputStream]) = {
+    (tabName, managed(new FileInputStream(templatePath)))
+  }
+}
 
 object Writer {
 
   val template1 = "/Users/daviddufour/code/hackathon/exscalabur/src/resources/templates/tab1_template.xlsx"
   val template2 = "/Users/daviddufour/code/hackathon/exscalabur/src/resources/templates/tab2_template.xlsx"
 
-  def writeExcelFileToDisk(windowSize: Int): Unit = {
+  //TODO: restrict to supported types
+  def writeExcelFileToDisk(filePath: String, windowSize: Int, tabs: Iterable[TabParam]): Unit = {
     // this should be parameter, just write to test/UUID.xlsx for now
-    val tempFilePath = s"/tmp/$randomUUID.xlsx"
-    val tabNameToExcelTemplateMap = Map("tab1_name" -> template1,
-                                        "tab2_name" -> template2)
-    val tabNameToStreamMap = tabNameToExcelTemplateMap.map { entry =>
-      (entry._1, managed(new FileInputStream(entry._2)))
-    }
+    val tabNameToStreamMap = tabs.map(_.toStreamTuple).toMap
+
     val workbook = new ExcelWorkbook(tabNameToStreamMap, windowSize)
-    val fos = new FileOutputStream(tempFilePath)
+    val fos = new FileOutputStream(filePath)
 
-    workbook.copyAndSubstitute("tab1_name", ExportModelUtils.getModelMap(12L))
-
-    writeRepeatedTabFuture(workbook, "tab2_name")
+    tabs.foreach {
+      case TabParam(TabType.single, tabName: String, _, tabData: List[DataRow], tabSchema: Map[String, KeyObject]) =>
+        workbook.copyAndSubstitute(tabName, getModelMap(tabSchema, tabData.head))
+      case TabParam(TabType.repeated, tabName: String, _, tabData: List[DataRow], tabSchema: Map[String, KeyObject]) =>
+        //TODO proper error handling on copyAndSubstitute
+        val startIndex = workbook.copyAndSubstitute(tabName).get
+        val modelMaps = tabData.map(rowData => getModelMap(tabSchema, rowData))
+        workbook.insertRows(tabName, startIndex, startIndex, modelMaps)
+    }
 
     // Writes the final workbook to the FileOutputStream with the given pathname, and then closes both the workbook and FileOutputStream
     workbook.write(fos)
@@ -35,19 +47,21 @@ object Writer {
     fos.close()
   }
 
-  private def writeRepeatedTabFuture(workbook: ExcelWorkbook,
-                                     tabName: String): Int = {
-    val templateIndex = workbook.copyAndSubstitute(tabName)
-    templateIndex match {
-      case Some(startingIndex) =>
-        workbook.insertRows(tabName,
-                            startingIndex,
-                            startingIndex,
-                            List("a", "b", "c").map(ExportModelUtils.getModelMap)) match {
-          case Success(value: Int) => value
-          case Failure(exception) => throw exception
-        }
-      case None => throw new Exception(s"No repeated row for tab $tabName")
+  private def getModelMap(tabSchema: Map[String, KeyObject], dataRow: DataRow): ModelMap = {
+    dataRow.data.map { case (key: String, value: CellType) =>
+      val newKey = s"${ExportModelUtils.REPEATED_FIELD_KEY}.$key"
+      val newValue = tabSchema(newKey) match {
+        // TODO different input output types
+        case KeyObject(_, CellType.string, CellType.string) =>
+          ExportModelUtils.toCellStringFromString(value.asInstanceOf[StringCellType].value)
+        case KeyObject(_, CellType.double, CellType.double) =>
+          ExportModelUtils.toCellDoubleFromDouble(value.asInstanceOf[DoubleCellType].value)
+        case KeyObject(_, CellType.long, CellType.double) =>
+          ExportModelUtils.toCellDoubleFromLong(value.asInstanceOf[LongCellType].value)
+        case KeyObject(_, CellType.long, CellType.date) =>
+          ExportModelUtils.toCellDateFromLong(value.asInstanceOf[LongCellType].value)
+      }
+      newKey -> newValue
     }
   }
 }
