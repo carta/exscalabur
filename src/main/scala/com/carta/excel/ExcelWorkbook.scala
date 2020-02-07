@@ -10,7 +10,9 @@ import org.apache.poi.xssf.usermodel.{XSSFCell, XSSFRow, XSSFSheet, XSSFWorkbook
 
 import scala.collection.{immutable, mutable}
 import scala.util.{Failure, Success, Try}
-
+import collection.JavaConverters._
+import org.apache.poi.ss.usermodel.{CellStyle, CellType, ClientAnchor}
+import org.apache.poi.xssf.usermodel.{XSSFCell, XSSFPicture, XSSFRow, XSSFSheet, XSSFWorkbook}
 /**
  * ExcelWorkbook is an excel generation class that wraps the Java Apache POI library. Its inputs are a set of template workbooks to read from
  * and the buffer window size which is used to stream writes to the output workbook.
@@ -29,6 +31,28 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
   // Apache POI documentation warns against using the InputStream because it actually has a bigger memory footprint
   // than using an XSSFWorkbook with a File, but for our purposes which are just to open and copy small templates, this
   // shouldn't be a problem.
+  def putPictures(templateName: String) = {
+    val templateWorkbook = excelTemplateWorkbooks(templateName)
+    val helper = outputExcelWorkbook.getCreationHelper
+    templateWorkbook.sheetIterator().asScala.toList.zipWithIndex.foreach { case (templateSheet: XSSFSheet, index: Int) =>
+      val templateImages = templateSheet.createDrawingPatriarch()
+        .getShapes
+        .asScala
+        .map(_.asInstanceOf[XSSFPicture])
+      if (templateImages.nonEmpty) {
+        val drawing = outputExcelWorkbook.getSheetAt(index).createDrawingPatriarch()
+        val anchor = helper.createClientAnchor()
+        anchor.setAnchorType(ClientAnchor.AnchorType.MOVE_AND_RESIZE)
+        val pics = templateWorkbook.getAllPictures.asScala
+        val templateAnchor = templateImages.toList.head.getClientAnchor
+        val pictureIndex = outputExcelWorkbook.addPicture(pics.head.getData, pics.head.getPictureType)
+        anchor.setCol1(templateAnchor.getCol1)
+        anchor.setRow1(templateAnchor.getRow1)
+        drawing.createPicture(anchor, pictureIndex).resize
+      }
+    }
+  }
+
   private val excelTemplateWorkbooks: Map[String, XSSFWorkbook] = templateStreamMap
     .mapValues(streamResource => streamResource
       .acquireAndGet(stream => new XSSFWorkbook(stream)))
