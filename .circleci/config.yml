@@ -49,12 +49,28 @@ jobs:
       - run:
           name: Run tests
           command: sbt test
+  publish-snapshot:
+    executor: scala-executor
+    steps:
+      - checkout
+      - run:
+          name: Publish to cloudsmith snapshots
+          command: |
+            PROJECT_VERSION=$(sbt nextVersion | tail -2 | head -1)
+            RELEASE_VERSION="${PROJECT_VERSION}-${CIRCLE_SHA1}"
+
+            echo "Attempting release of ${RELEASE_VERSION}"
+            if [[ ${RELEASE_VERSION} == *"SNAPSHOT"* ]]; then
+              sbt release release-version ${RELEASE_VERSION} next-version ${PROJECT_VERSION}
+            fi
+            exit 1
+
   publish-release:
     executor: scala-executor
     steps:
       - checkout
       - run:
-          name: Release to cloudsmith
+          name: Publish to cloudsmith releases
           command: sbt release with-defaults
 
 workflows:
@@ -62,6 +78,15 @@ workflows:
     jobs:
       - tests:
           <<: *ignore-master-filter
+      - authorize-publish:
+          type: approval
+          <<: *ignore-master-filter
+      - publish-snapshot:
+          <<: *ignore-master-filter
+          context: org-Global
+          requires:
+            - authorize-publish
+            - tests
 
   master:
     jobs:
