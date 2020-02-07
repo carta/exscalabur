@@ -4,11 +4,9 @@ import java.io.{FileInputStream, FileOutputStream}
 import java.util.UUID.randomUUID
 
 import com.carta.excel.ExportModelUtils.ModelMap
-import com.carta.excel._
-import resource.{ManagedResource, managed}
+import resource.managed
 
 import scala.util.{Failure, Success}
-
 
 object Writer {
 
@@ -29,12 +27,14 @@ object Writer {
     workbook.copyAndSubstitute("template1", ExportModelUtils.getModelMap(12L))
 
     val repeatedRowIndices = workbook.copyAndSubstitute("template2", ExportModelUtils.getModelMap(24L))
-    repeatedRowIndices.foreach((tabName, repeatedRowIndex) => writeRepeatedTabFuture(
-      tabName = tabName,
-      repeatedRowIndex = repeatedRowIndex,
-      workbook = workbook,
-      templateName = "template2",
-      substitutionMaps = List("a", "b", "c").map(ExportModelUtils.getModelMap)))
+    repeatedRowIndices.foreach {
+      case (tabName: String, repeatedRowIndex: Option[Int]) => writeRepeatedTabFuture(
+        tabName = tabName,
+        repeatedRowIndex = repeatedRowIndex,
+        workbook = workbook,
+        templateName = "template2",
+        substitutionMaps = List("a", "b", "c").map(ExportModelUtils.getModelMap))
+    }
 
     // Writes the final workbook to the FileOutputStream with the given pathname, and then closes both the workbook and FileOutputStream
     workbook.write(fos)
