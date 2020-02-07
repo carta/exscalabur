@@ -42,13 +42,10 @@ commands:
 
   publish:
     description: Tag and release to cloudsmith
-    parameters:
-      cloudsmith-repo:
-        type: string
     steps:
       - run:
           name: Publish to cloudsmith
-          command: sbt release
+          command: sbt release with-defaults
 
 jobs:
   tests:
@@ -63,14 +60,12 @@ jobs:
     executor: scala-executor
     steps:
       - checkout
-      - publish:
-          cloudsmith-repo: https://maven.cloudsmith.io/carta/maven-snapshots
+      - publish
   publish-release:
     executor: scala-executor
     steps:
       - checkout
-      - publish:
-          cloudsmith-repo: https://maven.cloudsmith.io/carta/maven-releases
+      - publish
 
 workflows:
   branch:
