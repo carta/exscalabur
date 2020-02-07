@@ -65,6 +65,7 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
     // row's index to be returned to the caller who will use it to start inserting repeated rows.
     // We need to explicitly break and return at this point in order to ensure that no further rows are written
     // and the stream's pointer is not advanced.
+    var x: (String, Option[Int]) = (sheetName, None)
     for (rowIndex <- 0 to templateSheet.getLastRowNum()) {
       Option(templateSheet.getRow(rowIndex)) match {
         // A row may be empty in the template
@@ -74,13 +75,13 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
             populateRowFromTemplate(templateRow, outputRow, templateSheet, outputSheet, substitutionMap)
           } else {
             // Do not copy and substitute anything from the template lower than a repeated row
-            return (sheetName, Some(rowIndex))
+            x = (sheetName, Some(rowIndex))
           }
         case None =>
       }
     }
 
-    (sheetName, None)
+    x
   }
 
   // insertRows inserts the given rows into the given index position in the template

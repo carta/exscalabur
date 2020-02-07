@@ -52,7 +52,6 @@ object Writer {
         //TODO proper error handling on copyAndSubstitute
         val startIndex = workbook.copyAndSubstitute(templateName, getModelMap(ExportModelUtils.SUBSTITUTION_KEY, tabSchema, tabData)).head
         val modelMaps = repeatedTabData.map(rowData => getModelMap(ExportModelUtils.REPEATED_FIELD_KEY, tabSchema, rowData))
-        println(modelMaps)
         startIndex._2 match {
           case Some(index) => workbook.insertRows(templateName, index, startIndex._1, index, modelMaps)
           case None =>
