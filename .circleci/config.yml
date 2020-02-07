@@ -77,6 +77,8 @@ workflows:
     jobs:
       - tests:
           <<: *ignore-master-filter
+  publish-branch:
+    jobs:
       - authorize-publish:
           type: approval
           <<: *ignore-master-filter
