@@ -86,7 +86,7 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
       .map { templateSheet: XSSFSheet =>
         val sheetName = templateSheet.getSheetName
         // Create sheet in workbook to write to
-        val outputSheet: SXSSFSheet = outputExcelWorkbook.createSheet(sheetName)
+        val outputSheet = outputExcelWorkbook.createSheet(sheetName)
 
         val index = copyAndSubstitute(templateSheet, outputSheet, substitutionMap, sheetName)
 

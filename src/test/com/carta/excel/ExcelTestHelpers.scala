@@ -1,6 +1,7 @@
 package com.carta.excel
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, File, InputStream}
+import java.util.Date
 
 import org.apache.poi.ss.usermodel.{BorderStyle, CellStyle, CellType}
 import org.apache.poi.xssf.usermodel._
@@ -8,16 +9,123 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.{Assertion, Succeeded}
 import resource.managed
 
-import scala.util.Random
+import scala.util.{Failure, Random, Success}
 
 object ExcelTestHelpers extends Matchers {
+  // Useful keys for adding certain cells that aren't supported by the substitution or repeated field keys
+  val STATIC_TEXT_KEY = "$TEST_STATIC_TEXT"
+  val STATIC_NUMBER_KEY = "$TEST_STATIC_NUMBER"
 
+  /*
+ * Excel template generation helper methods
+ */
   def createTempFile(prefix: String): File = {
     val f = File.createTempFile(prefix, ".xlsx")
     f.deleteOnExit()
     f
   }
 
+  def addRow(workbook: XSSFWorkbook, rowIndex: Int, cellValues: IndexedSeq[Option[CellValue]]): XSSFRow = {
+    val sheet: XSSFSheet = workbook.getSheetAt(0)
+    val row: XSSFRow = sheet.createRow(rowIndex)
+
+    cellValues.indices.foreach { i =>
+      val cell = row.createCell(i)
+      cell.setCellStyle(randomCellStyle(workbook))
+
+      cellValues(i).get match {
+        case CellString(s) =>
+          cell.setCellType(CellType.STRING)
+          cell.setCellValue(s)
+        case CellDouble(d) =>
+          cell.setCellType(CellType.NUMERIC)
+          cell.setCellValue(d)
+        case CellDate(d) =>
+          cell.setCellType(CellType.STRING)
+          cell.setCellValue(d)
+        case CellBoolean(b) =>
+          cell.setCellType(CellType.BOOLEAN)
+          cell.setCellValue(b)
+      }
+    }
+    row
+  }
+
+  def randomCellStyle(workbook: XSSFWorkbook): CellStyle = {
+    val style = workbook.createCellStyle()
+
+    // Set a bunch of random styles that will be copied over
+    style.setBorderTop(BorderStyle.values()(randomInt(BorderStyle.values.length)))
+    style.setBorderRight(BorderStyle.values()(randomInt(BorderStyle.values.length)))
+    style.setBorderBottom(BorderStyle.values()(randomInt(BorderStyle.values.length)))
+    style.setBorderLeft(BorderStyle.values()(randomInt(BorderStyle.values.length)))
+    style.setFillBackgroundColor(new XSSFColor(randomRGB(), new DefaultIndexedColorMap()))
+
+    style
+  }
+
+  def randomInt(maxExclusive: Int): Int = Random.nextInt(maxExclusive)
+
+  // generateTestWorkbook creates a new workbook with 1 sheet represented by the given rowModels.
+  //
+  // Depending on the value of insertRowModelKeys, either ExportModelUtils.SUBSTITUTION_KEY or ExportModelUtils.REPEATED_FIELD_KEY
+  // will be inserted when encountered or the values associated with those keys instead.
+  // This is useful for generating a template workbook which would contain the keys or an expected value workbook
+  // which would contain the corresponding values instead that are expected.
+  def generateTestWorkbook(name: String, rowModels: Seq[Iterable[(String, CellValue)]], insertRowModelKeys: Boolean = false): XSSFWorkbook = {
+    val workbook: XSSFWorkbook = new XSSFWorkbook()
+    val sheet: XSSFSheet = workbook.createSheet(name)
+
+    rowModels.indices.foreach { i =>
+      val templateRow = sheet.createRow(i)
+      val rowModel = rowModels(i)
+      populateRow(rowModel, templateRow, insertRowModelKeys)
+    }
+
+    workbook
+  }
+
+  def randomRGB(): Array[Byte] = Array[Byte](
+    randomInt(0xF).asInstanceOf[Byte],
+    randomInt(0xF).asInstanceOf[Byte],
+    randomInt(0xF).asInstanceOf[Byte]
+  )
+
+  def getModelSeq(t: SubTemplateModel): Iterable[(String, CellValue)] = {
+    val modelSeqBuilder = List.newBuilder[(String, CellValue)]
+    if (t.stringField.isDefined) {
+      val cellString = ExportModelUtils.toCellStringFromString(t.stringField.get)
+      modelSeqBuilder += ((s"${ExportModelUtils.SUBSTITUTION_KEY}_string_field", cellString))
+    }
+    if (t.doubleField.isDefined) {
+      val cellDouble = ExportModelUtils.toCellDoubleFromDouble(t.doubleField.get)
+      modelSeqBuilder += ((s"${ExportModelUtils.SUBSTITUTION_KEY}_long_field", cellDouble))
+    }
+    if (t.longField.isDefined) {
+      val cellLong = ExportModelUtils.toCellDoubleFromLong(t.longField.get)
+      modelSeqBuilder += ((s"${ExportModelUtils.SUBSTITUTION_KEY}_double_field", cellLong))
+    }
+
+    modelSeqBuilder.result
+  }
+
+  def getModelSeq(r: RepTemplateModel): Iterable[(String, CellValue)] = {
+    val modelSeqBuilder = List.newBuilder[(String, CellValue)]
+    if (r.stringField.isDefined) {
+      val cellString = ExportModelUtils.toCellStringFromString(r.stringField.get)
+      modelSeqBuilder += ((s"${ExportModelUtils.REPEATED_FIELD_KEY}_string_field", cellString))
+    }
+    if (r.doubleField.isDefined) {
+      val cellDouble = ExportModelUtils.toCellDoubleFromDouble(r.doubleField.get)
+      modelSeqBuilder += ((s"${ExportModelUtils.REPEATED_FIELD_KEY}_long_field", cellDouble))
+    }
+    if (r.longField.isDefined) {
+      val cellLong = ExportModelUtils.toCellDoubleFromLong(r.longField.get)
+      modelSeqBuilder += ((s"${ExportModelUtils.REPEATED_FIELD_KEY}_double_field", cellLong))
+    }
+
+    modelSeqBuilder.result
+  }
 
   /*
    * Assertion methods
@@ -124,6 +232,47 @@ object ExcelTestHelpers extends Matchers {
     }
   }
 
+  // writeOutputAndVerify creates and writes the contents of the given ByteArrayOutputStreams into an ExcelWorkbook
+  // and then verifies that output of this ExcelWorkbook is as expected
+  def writeOutputAndVerify(
+                            templateName: String,
+                            templateStream: ByteArrayOutputStream,
+                            expectedStream: ByteArrayOutputStream,
+                            actualStream: ByteArrayOutputStream,
+                            expectedCopyResult: Option[Int],
+                            modelMaps: ExportModelUtils.ModelMap = Map.empty,
+                            repeatedModelsSeq: Seq[ExportModelUtils.ModelMap] = Seq(),
+                            batchSize: Int = 1000,
+                          ): Unit = {
+    val templateBytes = managed(new ByteArrayInputStream(templateStream.toByteArray))
+    val templateStreamMap = Map(templateName -> templateBytes)
+
+    managed(new ExcelWorkbook(templateStreamMap, 10))
+      .acquireAndGet { workbook: ExcelWorkbook =>
+        val z = workbook.copyAndSubstitute(templateName, modelMaps).map(_._2)
+        val rowIndexOpt = z.head
+        rowIndexOpt shouldEqual expectedCopyResult
+        rowIndexOpt.foreach { startRowIndex =>
+          var currRowIndex = startRowIndex
+          repeatedModelsSeq.grouped(batchSize).foreach { batch =>
+            workbook.insertRows(templateName, startRowIndex, templateName, currRowIndex, batch) match {
+              case Success(newRowIndex) =>
+                newRowIndex shouldBe currRowIndex + batch.length
+                currRowIndex = newRowIndex
+              case Failure(e) => fail(e)
+            }
+          }
+        }
+        workbook.write(actualStream)
+      }
+
+
+    val expectedInputStream = new ByteArrayInputStream(expectedStream.toByteArray)
+    val actualInputStream = new ByteArrayInputStream(actualStream.toByteArray)
+
+    ExcelTestHelpers.assertEqualsWorkbooks(expectedInputStream, actualInputStream)
+  }
+
   private def assertEqualsFonts(expectedFont: XSSFFont, actualFont: XSSFFont, actualCell: XSSFCell): Assertion = {
     assert(expectedFont.getFamily == actualFont.getFamily, errorLocation(actualCell))
     assert(expectedFont.getColor == actualFont.getColor, errorLocation(actualCell))
@@ -144,203 +293,43 @@ object ExcelTestHelpers extends Matchers {
     s"Error occurred at row ${actualCell.getRowIndex} and column ${actualCell.getColumnIndex} in sheet ${actualCell.getSheet.getSheetName}"
   }
 
+  private def populateRow(rowModel: Iterable[(String, CellValue)], row: XSSFRow, substituteKey: Boolean): Unit = {
+    rowModel.foldLeft(0) {
+      (cellIndex, keyValue) =>
+        val cell = row.createCell(cellIndex)
+        val (key, cellValue) = keyValue
+        key match {
+          case key if key.startsWith(STATIC_TEXT_KEY) => cellValue match {
+            case CellString(string: String) => cell.setCellValue(string)
+            case _ => cell.setCellType(CellType.BLANK)
+          }
 
-  /*
-   * Excel template generation helper methods
-   */
-  def addRow(workbook: XSSFWorkbook, rowIndex: Int, cellValues: IndexedSeq[Option[CellValue]]): XSSFRow = {
-    val sheet: XSSFSheet = workbook.getSheetAt(0)
-    val row: XSSFRow = sheet.createRow(rowIndex)
+          case key if key.startsWith(STATIC_NUMBER_KEY) => cellValue match {
+            case CellDouble(double: Double) => cell.setCellValue(double)
+            case _ => cell.setCellType(CellType.BLANK)
+          }
 
-    cellValues.indices.foreach { i =>
-      val cell = row.createCell(i)
-      cell.setCellStyle(randomCellStyle(workbook))
+          case key if key.startsWith(ExportModelUtils.SUBSTITUTION_KEY) || key.startsWith(ExportModelUtils.REPEATED_FIELD_KEY) =>
+            if (substituteKey) cell.setCellValue(key)
+            else cellValue match {
+              case CellString(string: String) => cell.setCellValue(string)
+              case CellDouble(double: Double) => cell.setCellValue(double)
+              case CellBoolean(boolean: Boolean) => cell.setCellValue(boolean)
+              case CellDate(date: Date) => cell.setCellValue(date)
+              case _ => cell.setCellType(CellType.BLANK)
+            }
 
-      cellValues(i).get match {
-        case CellString(s) =>
-          cell.setCellType(CellType.STRING)
-          cell.setCellValue(s)
-        case CellDouble(d) =>
-          cell.setCellType(CellType.NUMERIC)
-          cell.setCellValue(d)
-        case CellDate(d) =>
-          cell.setCellType(CellType.STRING)
-          cell.setCellValue(d)
-        case CellBoolean(b) =>
-          cell.setCellType(CellType.BOOLEAN)
-          cell.setCellValue(b)
-      }
+          case _ => cell.setCellType(CellType.BLANK)
+        }
+
+        cellIndex + 1
     }
-    row
   }
-
-  def randomCellStyle(workbook: XSSFWorkbook): CellStyle = {
-    val style = workbook.createCellStyle()
-
-    // Set a bunch of random styles that will be copied over
-    style.setBorderTop(BorderStyle.values()(randomInt(BorderStyle.values.length)))
-    style.setBorderRight(BorderStyle.values()(randomInt(BorderStyle.values.length)))
-    style.setBorderBottom(BorderStyle.values()(randomInt(BorderStyle.values.length)))
-    style.setBorderLeft(BorderStyle.values()(randomInt(BorderStyle.values.length)))
-    style.setFillBackgroundColor(new XSSFColor(randomRGB(), new DefaultIndexedColorMap()))
-
-    style
-  }
-
-  def randomInt(maxExclusive: Int): Int = Random.nextInt(maxExclusive)
-
-  def randomRGB(): Array[Byte] = Array[Byte](
-    randomInt(0xF).asInstanceOf[Byte],
-    randomInt(0xF).asInstanceOf[Byte],
-    randomInt(0xF).asInstanceOf[Byte]
-  )
-
-  //
-  //  // Useful keys for adding certain cells that aren't supported by the substitution or repeated field keys
-  //  val STATIC_TEXT_KEY = "$TEST_STATIC_TEXT"
-  //  val STATIC_NUMBER_KEY = "$TEST_STATIC_NUMBER"
-  //
-  //  // Ordered version of ExportModelUtils.ModelMap to make it easier to test for exact cell locations
-
-  //
-  //  // generateTestWorkbook creates a new workbook with 1 sheet represented by the given rowModels.
-  //  //
-  //  // Depending on the value of insertRowModelKeys, either ExportModelUtils.SUBSTITUTION_KEY or ExportModelUtils.REPEATED_FIELD_KEY
-  //  // will be inserted when encountered or the values associated with those keys instead.
-  //  // This is useful for generating a template workbook which would contain the keys or an expected value workbook
-  //  // which would contain the corresponding values instead that are expected.
-  //  def generateTestWorkbook(name: String, rowModels: immutable.Seq[ModelSeq], insertRowModelKeys: Boolean = false): XSSFWorkbook = {
-  //    val workbook: XSSFWorkbook = new XSSFWorkbook()
-  //    val sheet: XSSFSheet = workbook.createSheet(name)
-  //
-  //    for {
-  //      rowIndex <- 0 until rowModels.length
-  //      templateRow = sheet.createRow(rowIndex)
-  //      rowModel = rowModels(rowIndex)
-  //    } populateRow(rowModel, templateRow, insertRowModelKeys)
-  //
-  //    workbook
-  //  }
-  //
-  //  private def populateRow(rowModel: ModelSeq, row: XSSFRow, substituteKey: Boolean): Unit = {
-  //    rowModel.foldLeft(0) {
-  //      (cellIndex, keyValue) =>
-  //        val cell = row.createCell(cellIndex)
-  //
-  //        keyValue._1 match {
-  //          case key if key.startsWith(STATIC_TEXT_KEY) => keyValue._2 match {
-  //            case CellString(string: String) => cell.setCellValue(string)
-  //            case _ => cell.setCellType(CellType.BLANK)
-  //          }
-  //
-  //          case key if key.startsWith(STATIC_NUMBER_KEY) => keyValue._2 match {
-  //            case CellDouble(double: Double) => cell.setCellValue(double)
-  //            case _ => cell.setCellType(CellType.BLANK)
-  //          }
-  //
-  //          case key if key.startsWith(ExportModelUtils.SUBSTITUTION_KEY) || key.startsWith(ExportModelUtils.REPEATED_FIELD_KEY) =>
-  //            if (substituteKey) cell.setCellValue(key)
-  //            else keyValue._2 match {
-  //              case CellString(string: String) => cell.setCellValue(string)
-  //              case CellDouble(double: Double) => cell.setCellValue(double)
-  //              case CellBoolean(boolean: Boolean) => cell.setCellValue(boolean)
-  //              case CellDate(date: Date) => cell.setCellValue(date)
-  //              case _ => cell.setCellType(CellType.BLANK)
-  //            }
-  //
-  //          case _ => cell.setCellType(CellType.BLANK)
-  //        }
-  //
-  //        cellIndex + 1
-  //    }
-  //  }
-  //
-  // writeOutputAndVerify creates and writes the contents of the given ByteArrayOutputStreams into an ExcelWorkbook
-  // and then verifies that output of this ExcelWorkbook is as expected
-
-  def writeOutputAndVerify(
-                            templateName: String,
-                            templateStream: ByteArrayOutputStream,
-                            expectedStream: ByteArrayOutputStream,
-                            actualStream: ByteArrayOutputStream,
-                            expectedCopyResult: Option[Int],
-                            modelMaps: ExportModelUtils.ModelMap = Map.empty,
-                            repeatedModelsSeq: Seq[Seq[ExportModelUtils.ModelMap]] = Seq(),
-                            batchSize: Int = 1000,
-                          ): Unit = {
-    val templateBytes = managed(new ByteArrayInputStream(templateStream.toByteArray))
-    val templateStreamMap = Map(templateName -> templateBytes)
-
-    managed(new ExcelWorkbook(templateStreamMap, 10))
-      .acquireAndGet { workbook: ExcelWorkbook =>
-        val rowIndexOpt = workbook.copyAndSubstitute(templateName, modelMaps).map(_._2).head
-        rowIndexOpt shouldEqual expectedCopyResult
-
-        workbook.write(actualStream)
-      }
-
-    //TODO: Fix writeOutputAndVerify for repeated rows
-
-    //    managed(new ExcelWorkbook(templateStreamMap, 10)).map { workbook: ExcelWorkbook =>
-    //
-    //      val rowIndexOpt = workbook.copyAndSubstitute(templateName, modelMaps).map(_._2).head
-    //      rowIndexOpt shouldEqual expectedCopyResult
-    //      (workbook, rowIndexOpt.get)
-    //    }.map { case (workbook: ExcelWorkbook, startRowIndex: Int) =>
-    //      var currRowIndex = startRowIndex
-    //      repeatedModelsSeq.grouped(batchSize)
-    //        .map(batch => batch.map(modelSeq => modelSeq.toMap))
-    //        .foreach { batch: Seq[ModelSeq] =>
-    //          workbook.insertRows(templateName, startRowIndex, templateName, currRowIndex, batch) match {
-    //            case Success(newRowIndex) =>
-    //              newRowIndex shouldBe currRowIndex + batch.length
-    //              currRowIndex = newRowIndex
-    //            case Failure(e) => fail(e)
-    //          }
-    //        }
-    //      workbook.write(actualStream)
-  }
-
-  //
-  //    val expectedInputStream = new ByteArrayInputStream(expectedStream.toByteArray())
-  //    val actualInputStream = new ByteArrayInputStream(actualStream.toByteArray())
-  //
-  //    ExcelTestHelpers.assertEqualsWorkbooks(expectedInputStream, actualInputStream)
-  //  }
-
 
   /*
    * Test models to test substitution and repeated templates
    */
-  case class SubTemplateModel(stringField: String, longField: Long, doubleField: Double)
+  case class SubTemplateModel(stringField: Option[String], longField: Option[Long], doubleField: Option[Double])
 
-  case class RepTemplateModel(stringField: String, longField: Long, doubleField: Double)
-
-  def getModelSeq(t: SubTemplateModel): Iterable[(String, CellValue)] = {
-    Vector(
-      (s"${
-        ExportModelUtils.SUBSTITUTION_KEY
-      }_string_field", ExportModelUtils.toCellStringFromString(t.stringField)),
-      (s"${
-        ExportModelUtils.SUBSTITUTION_KEY
-      }_long_field", ExportModelUtils.toCellDoubleFromLong(t.longField)),
-      (s"${
-        ExportModelUtils.SUBSTITUTION_KEY
-      }_double_field", ExportModelUtils.toCellDoubleFromDouble(t.doubleField)),
-    )
-  }
-
-  def getModelSeq(r: RepTemplateModel): Iterable[(String, CellValue)] = {
-    Vector(
-      (s"${
-        ExportModelUtils.REPEATED_FIELD_KEY
-      }_string_field", ExportModelUtils.toCellStringFromString(r.stringField)),
-      (s"${
-        ExportModelUtils.REPEATED_FIELD_KEY
-      }_long_field", ExportModelUtils.toCellDoubleFromLong(r.longField)),
-      (s"${
-        ExportModelUtils.REPEATED_FIELD_KEY
-      }_double_field", ExportModelUtils.toCellDoubleFromDouble(r.doubleField)),
-    )
-  }
+  case class RepTemplateModel(stringField: Option[String], longField: Option[Long], doubleField: Option[Double])
 }
