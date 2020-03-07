@@ -6,7 +6,7 @@ import java.util.UUID.randomUUID
 import com.carta.excel.ExportModelUtils.ModelMap
 import com.carta.excel.Writer.getModelMap
 import com.carta.temp.{CellType, DataRow, DoubleCellType, LongCellType, StringCellType}
-import com.carta.yaml.{CellType, KeyObject}
+import com.carta.yaml.{CellType, YamlEntry}
 import resource.{ManagedResource, managed}
 
 
@@ -14,7 +14,7 @@ case class TabParam(tabName: String,
                     templatePath: String,
                     tabData: DataRow,
                     repeatedTabData: List[DataRow],
-                    tabSchema: Map[String, KeyObject]) {
+                    tabSchema: Map[String, YamlEntry]) {
   def toStreamTuple: (String, ManagedResource[FileInputStream]) = {
     (tabName, managed(new FileInputStream(templatePath)))
   }
@@ -48,7 +48,7 @@ object Writer {
                     _,
                     tabData: DataRow,
                     repeatedTabData: List[DataRow],
-                    tabSchema: Map[String, KeyObject]) =>
+                    tabSchema: Map[String, YamlEntry]) =>
         //TODO proper error handling on copyAndSubstitute
         val startIndex = workbook.copyAndSubstitute(templateName, getModelMap(ExportModelUtils.SUBSTITUTION_KEY, tabSchema, tabData)).head
         val modelMaps = repeatedTabData.map(rowData => getModelMap(ExportModelUtils.REPEATED_FIELD_KEY, tabSchema, rowData))
@@ -66,19 +66,19 @@ object Writer {
     fos.close()
   }
 
-  private def getModelMap(keyType: String, tabSchema: Map[String, KeyObject], dataRow: DataRow): ModelMap = {
+  private def getModelMap(keyType: String, tabSchema: Map[String, YamlEntry], dataRow: DataRow): ModelMap = {
     dataRow.data.map { case (key: String, value: CellType) =>
       println(tabSchema)
       val newKey = s"${keyType}.$key"
       val newValue = tabSchema(newKey) match {
         // TODO different input output types
-        case KeyObject(_, CellType.string, CellType.string) =>
+        case YamlEntry(_, CellType.string, CellType.string) =>
           ExportModelUtils.toCellStringFromString(value.asInstanceOf[StringCellType].value)
-        case KeyObject(_, CellType.double, CellType.double) =>
+        case YamlEntry(_, CellType.double, CellType.double) =>
           ExportModelUtils.toCellDoubleFromDouble(value.asInstanceOf[DoubleCellType].value)
-        case KeyObject(_, CellType.long, CellType.double) =>
+        case YamlEntry(_, CellType.long, CellType.double) =>
           ExportModelUtils.toCellDoubleFromLong(value.asInstanceOf[LongCellType].value)
-        case KeyObject(_, CellType.long, CellType.date) =>
+        case YamlEntry(_, CellType.long, CellType.date) =>
           ExportModelUtils.toCellDateFromLong(value.asInstanceOf[LongCellType].value)
       }
       newKey -> newValue

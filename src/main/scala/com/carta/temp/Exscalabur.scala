@@ -3,7 +3,7 @@ package com.carta.temp
 import java.io.File
 
 import com.carta.excel.{TabParam, TabType, Writer}
-import com.carta.yaml.{KeyObject, YamlReader}
+import com.carta.yaml.{YamlEntry, YamlReader}
 
 import scala.collection.{immutable, mutable}
 
@@ -13,7 +13,7 @@ class Exscalabur(outputPath: String, yamlPath: String) {
   private val tabToTemplatePath = mutable.Map.empty[String, String]
   private val templateToStuff = mutable.Map.empty[String, (String, DataRow, List[DataRow])]
 
-  private val yamlReader = new YamlReader()
+  private val yamlReader = YamlReader()
   private lazy val yamlData = yamlReader.parse(new File(yamlPath))
 
   val windowSize = 100
@@ -30,7 +30,7 @@ class Exscalabur(outputPath: String, yamlPath: String) {
     Writer.writeExcelFileToDisk(outputPath, windowSize, getTabParams(TabType.repeated, yamlData))
   }
 
-  private def getTabParams(tabType: TabType.Value, yamlData: Map[String, KeyObject]) = {
+  private def getTabParams(tabType: TabType.Value, yamlData: Map[String, YamlEntry]) = {
     val toTabParam = ((tabName: String, data: DataRow, repeatedData: List[DataRow], templatePath: String) => {
       TabParam(tabName, templatePath, data, repeatedData, yamlData)
     }).tupled

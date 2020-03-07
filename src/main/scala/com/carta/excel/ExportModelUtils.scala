@@ -10,12 +10,12 @@ object ExportModelUtils {
 
   type ModelMap = Map[String, CellValue]
 
-  def toCellStringFromString(string: String): CellString = CellString(string)
+  def toCellStringFromString(string: String): CellValue = CellString(string)
 
   // to CellDouble Option converters
-  def toCellDoubleFromDouble(double: Double): CellDouble = CellDouble(double)
+  def toCellDoubleFromDouble(double: Double): CellValue = CellDouble(double)
 
-  def toCellDoubleFromLong(long: Long): CellDouble = CellDouble(long.toDouble)
+  def toCellDoubleFromLong(long: Long): CellValue = CellDouble(long.toDouble)
 
   // to CellDate Option converters
   def toCellDateFromLong(epochMillis: Long): CellDate =

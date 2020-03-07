@@ -9,27 +9,33 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 
 import scala.io.Source
 
-class YamlReader() {
-  private val mapper = new ObjectMapper(new YAMLFactory()).registerModule(DefaultScalaModule)
-  mapper.registerModule(DefaultScalaModule)
+class YamlReader(private val mapper: ObjectMapper) {
   private val parseTypeRef = new TypeReference[Map[String, KeyObjectBuilder]]() {}
 
-  def parse(file: File): Map[String, KeyObject] = {
+  def parse(file: File): Map[String, YamlEntry] = {
     val dataSource = Source.fromFile(file)
     val yamlData = dataSource.mkString
     dataSource.close()
     parseFromContent(yamlData)
   }
 
-  def parse(resourcePath: String): Map[String, KeyObject] = {
+  def parse(resourcePath: String): Map[String, YamlEntry] = {
     val yamlData = Source.fromResource(resourcePath).mkString
     parseFromContent(yamlData)
   }
 
-  private def parseFromContent(content: String): Map[String, KeyObject] = {
+  private def parseFromContent(content: String): Map[String, YamlEntry] = {
     val yamlMap: Map[String, KeyObjectBuilder] = mapper.readValue(content, parseTypeRef)
     yamlMap.map { case (yamlKey, keyObject) =>
       yamlKey -> keyObject.build()
     }
+  }
+}
+
+object YamlReader {
+  def apply (): YamlReader = {
+    val mapper = new ObjectMapper(new YAMLFactory()).registerModule(DefaultScalaModule)
+    mapper.registerModule(DefaultScalaModule)
+    new YamlReader(mapper)
   }
 }

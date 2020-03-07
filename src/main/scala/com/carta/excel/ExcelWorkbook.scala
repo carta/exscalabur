@@ -4,15 +4,15 @@ import java.io.{Closeable, InputStream, OutputStream}
 import java.util.Date
 
 import com.carta.excel.ExportModelUtils.ModelMap
-import org.apache.poi.ss.usermodel.{CellStyle, CellType}
+import org.apache.poi.ss.usermodel.{CellStyle, CellType, ClientAnchor, Row}
 import org.apache.poi.xssf.streaming.{SXSSFCell, SXSSFRow, SXSSFSheet, SXSSFWorkbook}
 import org.apache.poi.xssf.usermodel.{XSSFCell, XSSFRow, XSSFSheet, XSSFWorkbook}
 
 import scala.collection.{immutable, mutable}
 import scala.util.{Failure, Success, Try}
 import collection.JavaConverters._
-import org.apache.poi.ss.usermodel.{CellStyle, CellType, ClientAnchor}
 import org.apache.poi.xssf.usermodel.{XSSFCell, XSSFPicture, XSSFRow, XSSFSheet, XSSFWorkbook}
+
 /**
  * ExcelWorkbook is an excel generation class that wraps the Java Apache POI library. Its inputs are a set of template workbooks to read from
  * and the buffer window size which is used to stream writes to the output workbook.
@@ -53,13 +53,23 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
     }
   }
 
-  private val excelTemplateWorkbooks: Map[String, XSSFWorkbook] = templateStreamMap
-    .mapValues(streamResource => streamResource
-      .acquireAndGet(stream => new XSSFWorkbook(stream)))
+  private val excelTemplateWorkbooks: Map[String, XSSFWorkbook] = {
+    templateStreamMap.mapValues { streamResource =>
+      streamResource.acquireAndGet(stream => new XSSFWorkbook(stream))
+    }
+  }
   private val outputExcelWorkbook: SXSSFWorkbook = new SXSSFWorkbook(windowSize)
 
   // Cache of cell styles to avoid duplicating copied cell styles across various templates in the output workbook.
   private val cellStyleCache: mutable.HashMap[CellStyle, Int] = new mutable.HashMap[CellStyle, Int]
+
+  private def getNumColumns(sheet: XSSFSheet) = {
+    sheet.rowIterator().asScala
+      .map(row => row.getLastCellNum.toInt)
+      .foldRight(0) {
+        Math.max
+      }
+  }
 
   // copyAndSubstitute copies the template workbook given by templateName to the output workbook in a
   // buffered streamed manner, using substitutionMap to make any key value substitutions that are encountered
@@ -67,20 +77,25 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
   //
   // Returns the current index within the template to start adding rows as expected by the template or
   // None if this is the end of this template and no rows are expected to be inserted.
-  def copyAndSubstitute(templateName: String, substitutionMap: ExportModelUtils.ModelMap = Map.empty): immutable.Seq[(String, Option[Int])] = {
+  def copyAndSubstitute(templateName: String, substitutionMap: ExportModelUtils.ModelMap = Map.empty): Iterable[(String, Option[Int])] = {
     // We expect every template workbook to only have 1 sheet - this allows us to be more
     // flexible with what templates we want to load into memory via the XSSF api.
     val templateWorkbook: XSSFWorkbook = excelTemplateWorkbooks(templateName)
-    val templateSheets: immutable.Seq[XSSFSheet] = (0 until templateWorkbook.getNumberOfSheets())
-        .map(templateWorkbook.getSheetAt(_))
+    (0 until templateWorkbook.getNumberOfSheets)
+      .map(templateWorkbook.getSheetAt)
+      .map { templateSheet: XSSFSheet =>
+        val sheetName = templateSheet.getSheetName
+        // Create sheet in workbook to write to
+        val outputSheet: SXSSFSheet = outputExcelWorkbook.createSheet(sheetName)
 
-    templateSheets.map { templateSheet =>
-      val sheetName = templateSheet.getSheetName()
-      // Create sheet in workbook to write to
-      val outputSheet: SXSSFSheet = outputExcelWorkbook.createSheet(sheetName)
+        val index = copyAndSubstitute(templateSheet, outputSheet, substitutionMap, sheetName)
 
-      copyAndSubstitute(templateSheet, outputSheet, substitutionMap, sheetName)
-    }
+        val numColumns = getNumColumns(templateSheet)
+        (0 until numColumns).foreach { i =>
+          outputSheet.setColumnWidth(i, templateSheet.getColumnWidth(i))
+        }
+        index
+      }
   }
 
   private def copyAndSubstitute(templateSheet: XSSFSheet, outputSheet: SXSSFSheet, substitutionMap: ModelMap, sheetName: String): (String, Option[Int]) = {
@@ -90,7 +105,7 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
     // We need to explicitly break and return at this point in order to ensure that no further rows are written
     // and the stream's pointer is not advanced.
     var x: (String, Option[Int]) = (sheetName, None)
-    for (rowIndex <- 0 to templateSheet.getLastRowNum()) {
+    for (rowIndex <- 0 to templateSheet.getLastRowNum) {
       Option(templateSheet.getRow(rowIndex)) match {
         // A row may be empty in the template
         case Some(templateRow) =>
@@ -120,7 +135,7 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
    * @param rows
    * @return
    */
-  def insertRows(templateName: String, templateRowIndex: Int, tabName: String, outputStartIndex: Int, rows: immutable.Seq[ExportModelUtils.ModelMap]): Try[Int] = {
+  def insertRows(templateName: String, templateRowIndex: Int, tabName: String, outputStartIndex: Int, rows: Seq[ExportModelUtils.ModelMap]): Try[Int] = {
     // Indices are invalid
     if (templateRowIndex < 0 || outputStartIndex < 0) {
       Failure(new IllegalArgumentException(s"Invalid Indices templateRowIndex=$templateRowIndex outputStartIndex=$outputStartIndex"))
@@ -142,7 +157,7 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
               populateRowFromTemplate(templateRepeatedRow, outputRow, templateSheet, outputSheet, rows(rowIndex))
             } catch {
               case e: IllegalArgumentException =>
-                //logger.warn(s"Failed to create row at index ${outputStartIndex + rowIndex} in output workbook because row is already created")
+              //logger.warn(s"Failed to create row at index ${outputStartIndex + rowIndex} in output workbook because row is already created")
             }
           }
           Success(outputStartIndex + rows.length)
@@ -179,10 +194,10 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
   }
 
   private def populateRowFromTemplate(templateRow: XSSFRow,
-                                       outputRow: SXSSFRow,
-                                       templateSheet: XSSFSheet,
-                                       outputSheet: SXSSFSheet,
-                                       substitutionMap: ExportModelUtils.ModelMap
+                                      outputRow: SXSSFRow,
+                                      templateSheet: XSSFSheet,
+                                      outputSheet: SXSSFSheet,
+                                      substitutionMap: ExportModelUtils.ModelMap
                                      ): Unit = {
     copyRowHeight(templateRow, outputRow)
 
@@ -209,12 +224,12 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
         val stringValue = templateCell.getStringCellValue
         substituteString(stringValue, outputCell, substitutionMap)
       case _ =>
-        //logger.trace("CellType is one of {CellType.ERROR, CellType.BLANK, CellType.FORMULA, CellType.NONE} which we do not want to copy from")
+      //logger.trace("CellType is one of {CellType.ERROR, CellType.BLANK, CellType.FORMULA, CellType.NONE} which we do not want to copy from")
     }
   }
 
   private def substituteString(stringValue: String, outputCell: SXSSFCell, substitutionMap: ExportModelUtils.ModelMap): Unit = {
-    if (stringValue.startsWith(ExportModelUtils.SUBSTITUTION_KEY) || stringValue.startsWith(ExportModelUtils.REPEATED_FIELD_KEY)){
+    if (stringValue.startsWith(ExportModelUtils.SUBSTITUTION_KEY) || stringValue.startsWith(ExportModelUtils.REPEATED_FIELD_KEY)) {
       if (substitutionMap.contains(stringValue)) {
         substitutionMap(stringValue) match {
           case CellDouble(double: Double) => outputCell.setCellValue(double)

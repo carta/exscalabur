@@ -1,39 +1,14 @@
-$KEY.company_name:
+$KEY.key1:
   keyType: "single"
   columnType: "string"
   excelType: "string"
 
-$KEY.coop_one:
-  keyType: "single"
-  columnType: "string"
-  excelType: "string"
-
-$KEY.coop_two:
-  keyType: "single"
-  columnType: "string"
-  excelType: "string"
-
-$REP.animals:
+$KEY.key2:
   keyType: "repeated"
-  columnType: "string"
-  excelType: "string"
-
-$REP.numbers:
-  keyType: "repeated"
-  columnType: "long"
+  columnType: "double"
   excelType: "double"
 
-$REP.foods:
-  keyType: "repeated"
-  columnType: "string"
-  excelType: "string"
-
-$REP.dates:
-  keyType: "repeated"
-  columnType: "string"
-  excelType: "string"
-
-$REP.cities:
-  keyType: "repeated"
-  columnType: "string"
-  excelType: "string"
+$KEY.key3:
+  keyType: "single"
+  columnType: "long"
+  excelType: "date"

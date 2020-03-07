@@ -2,7 +2,7 @@ package com.carta.yaml
 
 import com.fasterxml.jackson.module.scala.JsonScalaEnumeration
 
-case class KeyObject
+case class YamlEntry
 (
   keyType: KeyType.Value,
   columnType: CellType.Value,
@@ -18,8 +18,8 @@ class KeyObjectBuilder(
 
                         @JsonScalaEnumeration(classOf[CellTypeReference])
                         excelType: CellType.Value) {
-  def build(): KeyObject = {
-    KeyObject(keyType, columnType, excelType)
+  def build(): YamlEntry = {
+    YamlEntry(keyType, columnType, excelType)
   }
 }
 
