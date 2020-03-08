@@ -4,14 +4,14 @@ import java.io.{Closeable, InputStream, OutputStream}
 import java.util.Date
 
 import com.carta.excel.ExportModelUtils.ModelMap
-import org.apache.poi.ss.usermodel.{CellStyle, CellType, ClientAnchor, Row}
+import com.carta.excel.WorkbookHelpers._
+import org.apache.poi.ss.usermodel._
 import org.apache.poi.xssf.streaming.{SXSSFCell, SXSSFRow, SXSSFSheet, SXSSFWorkbook}
-import org.apache.poi.xssf.usermodel.{XSSFCell, XSSFRow, XSSFSheet, XSSFWorkbook}
+import org.apache.poi.xssf.usermodel.{XSSFPicture, XSSFSheet, XSSFWorkbook}
 
-import scala.collection.{immutable, mutable}
+import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
-import collection.JavaConverters._
-import org.apache.poi.xssf.usermodel.{XSSFCell, XSSFPicture, XSSFRow, XSSFSheet, XSSFWorkbook}
 
 /**
  * ExcelWorkbook is an excel generation class that wraps the Java Apache POI library. Its inputs are a set of template workbooks to read from
@@ -77,50 +77,41 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
   //
   // Returns the current index within the template to start adding rows as expected by the template or
   // None if this is the end of this template and no rows are expected to be inserted.
-  def copyAndSubstitute(templateName: String, substitutionMap: ExportModelUtils.ModelMap = Map.empty): Iterable[(String, Option[Int])] = {
+  def copyAndSubstitute(templateName: String, substitutionMap: ExportModelUtils.ModelMap = Map.empty): IndexedSeq[(String, Option[Int])] = {
     // We expect every template workbook to only have 1 sheet - this allows us to be more
     // flexible with what templates we want to load into memory via the XSSF api.
-    val templateWorkbook: XSSFWorkbook = excelTemplateWorkbooks(templateName)
-    (0 until templateWorkbook.getNumberOfSheets)
-      .map(templateWorkbook.getSheetAt)
-      .map { templateSheet: XSSFSheet =>
+    excelTemplateWorkbooks(templateName).sheets()
+      .map { templateSheet =>
         val sheetName = templateSheet.getSheetName
-        // Create sheet in workbook to write to
         val outputSheet = outputExcelWorkbook.createSheet(sheetName)
 
-        val index = copyAndSubstitute(templateSheet, outputSheet, substitutionMap, sheetName)
+        val index = copyAndSubstitute(templateSheet, outputSheet, substitutionMap)
 
         val numColumns = getNumColumns(templateSheet)
         (0 until numColumns).foreach { i =>
           outputSheet.setColumnWidth(i, templateSheet.getColumnWidth(i))
         }
-        index
+        (sheetName, index)
       }
   }
 
-  private def copyAndSubstitute(templateSheet: XSSFSheet, outputSheet: SXSSFSheet, substitutionMap: ModelMap, sheetName: String): (String, Option[Int]) = {
+  private def copyAndSubstitute(templateSheet: XSSFSheet, outputSheet: SXSSFSheet, substitutionMap: ModelMap): Option[Int] = {
     // Get each template row and its corresponding row index and use the given substitutionMap to copy them
     // over to the output workbook. If we find a placeholder repeated row in the template, then we return that
     // row's index to be returned to the caller who will use it to start inserting repeated rows.
     // We need to explicitly break and return at this point in order to ensure that no further rows are written
     // and the stream's pointer is not advanced.
-    var x: (String, Option[Int]) = (sheetName, None)
-    for (rowIndex <- 0 to templateSheet.getLastRowNum) {
-      Option(templateSheet.getRow(rowIndex)) match {
-        // A row may be empty in the template
-        case Some(templateRow) =>
-          if (!isRepeatedRow(templateRow)) {
-            val outputRow = outputSheet.createRow(rowIndex)
-            populateRowFromTemplate(templateRow, outputRow, templateSheet, outputSheet, substitutionMap)
-          } else {
-            // Do not copy and substitute anything from the template lower than a repeated row
-            x = (sheetName, Some(rowIndex))
-          }
-        case None =>
+    templateSheet.iterator().asScala
+      .foldLeft(Option.empty[Int]) { (acc: Option[Int], templateRow: Row) =>
+        val rowIndex = templateRow.getRowNum
+        if (!isRepeatedRow(templateRow)) {
+          val outputRow = outputSheet.createRow(rowIndex)
+          populateRowFromTemplate(templateRow, outputRow, templateSheet, outputSheet, substitutionMap)
+          acc
+        } else {
+          Some(rowIndex)
+        }
       }
-    }
-
-    x
   }
 
   // insertRows inserts the given rows into the given index position in the template
@@ -186,14 +177,18 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
     outputExcelWorkbook.close()
   }
 
-  private def isRepeatedRow(row: XSSFRow): Boolean = {
-    row.getLastCellNum() > 0 &&
-      Option(row.getCell(0)) != None &&
-      row.getCell(0).getCellType() == CellType.STRING &&
-      row.getCell(0).getStringCellValue().startsWith(ExportModelUtils.REPEATED_FIELD_KEY)
+  private def isRepeatedRow(row: Row): Boolean = {
+    row.getLastCellNum > 0 && isRepeatedCell(Option(row.getCell(0)))
   }
 
-  private def populateRowFromTemplate(templateRow: XSSFRow,
+  private def isRepeatedCell(cellOpt: Option[Cell]): Boolean = cellOpt match {
+    case None => false
+    case Some(cell) =>
+      CellType.STRING == cell.getCellType &&
+        cell.getStringCellValue.startsWith(ExportModelUtils.REPEATED_FIELD_KEY)
+  }
+
+  private def populateRowFromTemplate(templateRow: Row,
                                       outputRow: SXSSFRow,
                                       templateSheet: XSSFSheet,
                                       outputSheet: SXSSFSheet,
@@ -201,20 +196,17 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
                                      ): Unit = {
     copyRowHeight(templateRow, outputRow)
 
-    for (colIndex <- 0 until templateRow.getLastCellNum()) {
-      Option(templateRow.getCell(colIndex)) match {
-        case Some(templateCell: XSSFCell) =>
-          val outputCell = outputRow.createCell(colIndex)
-
-          copyColumnWidth(templateSheet, outputSheet, colIndex)
-          applyCellStyleFromTemplate(templateCell, outputCell)
-          substituteAndCopyCell(templateCell, outputCell, substitutionMap)
-        case None => Unit
+    templateRow.cellIterator().asScala
+      .foreach { cell =>
+        val cellIndex = cell.getColumnIndex
+        val outputCell = outputRow.createCell(cellIndex)
+        copyColumnWidth(templateSheet, outputSheet, cellIndex)
+        applyCellStyleFromTemplate(cell, outputCell)
+        substituteAndCopyCell(cell, outputCell, substitutionMap)
       }
-    }
   }
 
-  private def substituteAndCopyCell(templateCell: XSSFCell, outputCell: SXSSFCell, substitutionMap: ExportModelUtils.ModelMap): Unit = {
+  private def substituteAndCopyCell(templateCell: Cell, outputCell: SXSSFCell, substitutionMap: ExportModelUtils.ModelMap): Unit = {
     templateCell.getCellType match {
       case CellType.NUMERIC =>
         outputCell.setCellValue(templateCell.getNumericCellValue)
@@ -247,27 +239,24 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
     }
   }
 
-  private def applyCellStyleFromTemplate(fromCell: XSSFCell, toCell: SXSSFCell): Unit = {
-    val templateStyle: CellStyle = fromCell.getCellStyle()
+  private def applyCellStyleFromTemplate(from: Cell, to: Cell): Unit = {
+    val templateStyle = from.getCellStyle
 
     if (!cellStyleCache.contains(templateStyle)) {
       val outputStyle = outputExcelWorkbook.createCellStyle()
-
       outputStyle.cloneStyleFrom(templateStyle)
-      toCell.setCellStyle(outputStyle)
+      cellStyleCache.put(templateStyle, outputStyle.getIndex)
+    }
 
-      cellStyleCache.put(templateStyle, outputStyle.getIndex())
-    }
-    else {
-      toCell.setCellStyle(outputExcelWorkbook.getCellStyleAt(cellStyleCache(templateStyle)))
-    }
+    val outputStyleIndex = cellStyleCache(templateStyle)
+    to.setCellStyle(outputExcelWorkbook.getCellStyleAt(outputStyleIndex))
   }
 
   private def copyColumnWidth(from: XSSFSheet, to: SXSSFSheet, col: Int): Unit = {
     to.setColumnWidth(col, from.getColumnWidth(col))
   }
 
-  private def copyRowHeight(from: XSSFRow, to: SXSSFRow): Unit = {
+  private def copyRowHeight(from: Row, to: SXSSFRow): Unit = {
     to.setHeight(from.getHeight)
   }
 }
