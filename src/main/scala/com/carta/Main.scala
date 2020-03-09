@@ -1,6 +1,6 @@
 package com.carta
 
-import com.carta.temp.{DataRow, Exscalabur}
+import com.carta.exscalabur.{DataRow, Exscalabur}
 
 import scala.collection.immutable
 
