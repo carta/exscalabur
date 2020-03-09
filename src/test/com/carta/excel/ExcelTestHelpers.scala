@@ -15,6 +15,9 @@ object ExcelTestHelpers extends Matchers {
   // Useful keys for adding certain cells that aren't supported by the substitution or repeated field keys
   val STATIC_TEXT_KEY = "$TEST_STATIC_TEXT"
   val STATIC_NUMBER_KEY = "$TEST_STATIC_NUMBER"
+  val STATIC_BOOL_KEY = "$TEST_STATIC_BOOL"
+  val STATIC_DOUBLE_KEY = "$TEST_STATIC_DOUBLE"
+  val STATIC_DATE_KEY = "$TEST_STATIC_DATE"
 
   /*
  * Excel template generation helper methods
@@ -134,6 +137,7 @@ object ExcelTestHelpers extends Matchers {
     (managed(new XSSFWorkbook(expectedWorkbookStream)) and managed(new XSSFWorkbook(actualWorkbookStream)))
       .acquireAndGet {
         case (expectedWorkbook, actualWorkbook) =>
+          //          assert(expectedWorkbook.getAllPictures.size() == actualWorkbook.getAllPictures.size())
           assert(expectedWorkbook.getNumberOfSheets == actualWorkbook.getNumberOfSheets)
           assert(List.range(0, expectedWorkbook.getNumberOfSheets) map { sheetIndex =>
             assertEqualsSheets(
@@ -231,6 +235,38 @@ object ExcelTestHelpers extends Matchers {
         }
     }
   }
+
+  def putPicture(sheet: XSSFSheet, picData: PictureData): Unit = {
+    val workbook = sheet.getWorkbook
+    val anchor = workbook.getCreationHelper.createClientAnchor()
+    val drawing = sheet.createDrawingPatriarch()
+
+    val imgStream = getClass.getResourceAsStream(picData.imgSrc)
+
+    val picIndex = workbook.addPicture(imgStream, picData.imgType)
+    anchor.setCol1(picData.posn.col1)
+    anchor.setCol2(picData.posn.col2)
+    anchor.setRow1(picData.posn.row1)
+    anchor.setRow2(picData.posn.row2)
+    anchor.setDx1(picData.posn.dx1)
+    anchor.setDx2(picData.posn.dx2)
+    anchor.setDy1(picData.posn.dy1)
+    anchor.setDy2(picData.posn.dy2)
+
+    drawing.createPicture(anchor, picIndex)
+  }
+
+  case class PictureData(imgSrc: String, imgType: Int, posn: PicturePosition)
+
+  case class PicturePosition(col1: Int = 0,
+                             col2: Int = 0,
+                             row1: Int = 0,
+                             row2: Int = 0,
+                             dx1: Int = 0,
+                             dx2: Int = 0,
+                             dy1: Int = 0,
+                             dy2: Int = 0)
+
 
   // writeOutputAndVerify creates and writes the contents of the given ByteArrayOutputStreams into an ExcelWorkbook
   // and then verifies that output of this ExcelWorkbook is as expected
@@ -332,4 +368,5 @@ object ExcelTestHelpers extends Matchers {
   case class SubTemplateModel(stringField: Option[String], longField: Option[Long], doubleField: Option[Double])
 
   case class RepTemplateModel(stringField: Option[String], longField: Option[Long], doubleField: Option[Double])
+
 }

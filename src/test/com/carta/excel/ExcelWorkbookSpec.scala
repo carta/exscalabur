@@ -1,14 +1,16 @@
 package com.carta.excel
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import java.util.Date
 
-import com.carta.excel.ExcelTestHelpers.{RepTemplateModel, SubTemplateModel, generateTestWorkbook, getModelSeq, writeOutputAndVerify}
-import org.apache.poi.ss.usermodel.CellType
+import com.carta.excel.ExcelTestHelpers.{PictureData, PicturePosition, RepTemplateModel, SubTemplateModel, generateTestWorkbook, getModelSeq, writeOutputAndVerify}
+import org.apache.poi.ss.usermodel.{CellType, Workbook}
 import org.apache.poi.xssf.usermodel.{XSSFCell, XSSFRow, XSSFSheet, XSSFWorkbook}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import resource.managed
 
+import scala.collection.JavaConverters._
 import scala.util.Random
 
 
@@ -34,6 +36,90 @@ class ExcelWorkbookSpec extends AnyFlatSpec with Matchers {
       new ByteArrayInputStream(templateStream.toByteArray),
       new ByteArrayInputStream(actualStream.toByteArray)
     )
+  }
+
+  "ExcelWorkbook" should "not put image if template has no images" in {
+    val templateName = "noImages"
+    val templateStream = new ByteArrayOutputStream()
+    val actualStream = new ByteArrayOutputStream()
+    val templateWorkbook = new XSSFWorkbook()
+    val sheet = templateWorkbook.createSheet(templateName)
+    val row = sheet.createRow(0)
+
+    templateWorkbook.write(templateStream)
+    writeOutputAndVerify(templateName, templateStream, templateStream, actualStream, None)
+
+    val resultingWorkbook = new XSSFWorkbook(new ByteArrayInputStream(actualStream.toByteArray))
+    assert(resultingWorkbook.getAllPictures.isEmpty)
+  }
+
+  "ExcelWorkbook" should "put image if template has image" in {
+    val templateName = "image"
+    val templateStream = new ByteArrayOutputStream()
+    val actualStream = new ByteArrayOutputStream()
+    val templateWorkbook = new XSSFWorkbook()
+    val sheet = templateWorkbook.createSheet(templateName)
+    sheet.createRow(0)
+    val picType = Workbook.PICTURE_TYPE_PNG
+    val picData = PictureData(
+      imgSrc = "/img/carta.png",
+      imgType = picType,
+      posn = PicturePosition(
+        col1 = 2,
+        row1 = 2
+      )
+    )
+    ExcelTestHelpers.putPicture(sheet, picData)
+
+    templateWorkbook.write(templateStream)
+    writeOutputAndVerify(templateName, templateStream, templateStream, actualStream, None)
+
+    val resultingWorkbook = new XSSFWorkbook(new ByteArrayInputStream(actualStream.toByteArray))
+    assert(resultingWorkbook.getAllPictures.size() == 1)
+    val resultingImg = resultingWorkbook.getAllPictures.get(0)
+    assert(resultingImg.getPictureType == picType)
+  }
+
+  "ExcelWorkbook" should "put multiple images if template has many images" in {
+    val templateName = "image"
+    val templateStream = new ByteArrayOutputStream()
+    val actualStream = new ByteArrayOutputStream()
+    val templateWorkbook = new XSSFWorkbook()
+    val sheet = templateWorkbook.createSheet(templateName)
+    sheet.createRow(0)
+    val picType = Workbook.PICTURE_TYPE_PNG
+
+    val picData1 = PictureData(
+      imgSrc = "/img/carta.png",
+      imgType = picType,
+      posn = PicturePosition(
+        col1 = 2,
+        row1 = 2
+      )
+    )
+
+    val picData2 = PictureData(
+      imgSrc = picData1.imgSrc,
+      imgType = picData1.imgType,
+      posn = PicturePosition(
+        col1 = 5,
+        col2 = 6,
+        row1 = 3,
+        row2 = 8
+      )
+    )
+
+    ExcelTestHelpers.putPicture(sheet, picData1)
+    ExcelTestHelpers.putPicture(sheet, picData2)
+
+    templateWorkbook.write(templateStream)
+    writeOutputAndVerify(templateName, templateStream, templateStream, actualStream, None)
+
+    val resultingWorkbook = new XSSFWorkbook(new ByteArrayInputStream(actualStream.toByteArray))
+    assert(resultingWorkbook.getAllPictures.size() == 2)
+    resultingWorkbook.getAllPictures.asScala foreach { picData =>
+      assert(picData.getPictureType == picType)
+    }
   }
 
   "ExcelWorkbook" should "not create a new cellStyle for each cell in the output Workbook" in {
@@ -139,8 +225,8 @@ class ExcelWorkbookSpec extends AnyFlatSpec with Matchers {
     val templateRows = Seq(
       // Row with static text, empty cell, and number
       Seq(
-        (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("text")),
-        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1234)),
+        (ExcelTestHelpers.STATIC_DOUBLE_KEY, CellDouble(12.34)),
+        (ExcelTestHelpers.STATIC_BOOL_KEY, CellBoolean(false)),
       ),
 
       // Row with a substitution key missing
@@ -169,7 +255,7 @@ class ExcelWorkbookSpec extends AnyFlatSpec with Matchers {
       Seq(
         (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("text")),
         ("empty", CellBlank()),
-        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1234)),
+        (ExcelTestHelpers.STATIC_DATE_KEY, CellDate(new Date(2019, 12, 13)))
       ),
 
       // Row with substitution keys
@@ -180,7 +266,7 @@ class ExcelWorkbookSpec extends AnyFlatSpec with Matchers {
       Seq(
         (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("text")),
         ("empty", CellBlank()),
-        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1234)),
+        (ExcelTestHelpers.STATIC_DATE_KEY, CellDate(new Date(2019, 12, 13))),
       ),
 
       // Expect row with 1 None value missing

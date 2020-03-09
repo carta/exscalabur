@@ -1,11 +1,9 @@
 package com.carta.excel
 
 import java.io.{FileInputStream, FileOutputStream}
-import java.util.UUID.randomUUID
 
 import com.carta.excel.ExportModelUtils.ModelMap
-import com.carta.excel.Writer.getModelMap
-import com.carta.temp.{CellType, DataRow, DoubleCellType, LongCellType, StringCellType}
+import com.carta.exscalabur._
 import com.carta.yaml.{CellType, YamlEntry}
 import resource.{ManagedResource, managed}
 

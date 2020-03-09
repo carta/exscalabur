@@ -25,15 +25,20 @@ class YamlReader(private val mapper: ObjectMapper) {
   }
 
   private def parseFromContent(content: String): Map[String, YamlEntry] = {
-    val yamlMap: Map[String, KeyObjectBuilder] = mapper.readValue(content, parseTypeRef)
-    yamlMap.map { case (yamlKey, keyObject) =>
-      yamlKey -> keyObject.build()
+    if (content.isEmpty) {
+      Map.empty
+    }
+    else {
+      val yamlMap: Map[String, KeyObjectBuilder] = mapper.readValue(content, parseTypeRef)
+      yamlMap.map { case (yamlKey, keyObject) =>
+        yamlKey -> keyObject.build()
+      }
     }
   }
 }
 
 object YamlReader {
-  def apply (): YamlReader = {
+  def apply(): YamlReader = {
     val mapper = new ObjectMapper(new YAMLFactory()).registerModule(DefaultScalaModule)
     mapper.registerModule(DefaultScalaModule)
     new YamlReader(mapper)

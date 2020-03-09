@@ -22,35 +22,6 @@ import scala.util.{Failure, Success, Try}
  * @param windowSize the number of rows that are kept in memory until flushed out, -1 means all records are available for random access .
  */
 class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[InputStream]], windowSize: Int) extends Closeable {
-  // We use an InputStream instead of a File when creating the XSSFWorkbook to ensure that the read file is not
-  // written to at all. When using a File, XSSFWorkbook#close() will actually modify the last access timestamp of
-  // the file unnecessarily and become annoying for git diffs. Using InputStream here ensures that this does
-  // not happen (setting the file as readonly is not enough, XSSFWorkbook#close() will still try to write and actually
-  // raise an exception.
-  // Apache POI documentation warns against using the InputStream because it actually has a bigger memory footprint
-  // than using an XSSFWorkbook with a File, but for our purposes which are just to open and copy small templates, this
-  // shouldn't be a problem.
-  def putPictures(templateName: String) = {
-    val templateWorkbook = excelTemplateWorkbooks(templateName)
-    val helper = outputExcelWorkbook.getCreationHelper
-    templateWorkbook.sheetIterator().asScala.toList.zipWithIndex.foreach { case (templateSheet: XSSFSheet, index: Int) =>
-      val templateImages = templateSheet.createDrawingPatriarch()
-        .getShapes
-        .asScala
-        .map(_.asInstanceOf[XSSFPicture])
-      if (templateImages.nonEmpty) {
-        val drawing = outputExcelWorkbook.getSheetAt(index).createDrawingPatriarch()
-        val anchor = helper.createClientAnchor()
-        anchor.setAnchorType(ClientAnchor.AnchorType.MOVE_AND_RESIZE)
-        val pics = templateWorkbook.getAllPictures.asScala
-        val templateAnchor = templateImages.toList.head.getClientAnchor
-        val pictureIndex = outputExcelWorkbook.addPicture(pics.head.getData, pics.head.getPictureType)
-        anchor.setCol1(templateAnchor.getCol1)
-        anchor.setRow1(templateAnchor.getRow1)
-        drawing.createPicture(anchor, pictureIndex).resize
-      }
-    }
-  }
 
   private val excelTemplateWorkbooks: Map[String, XSSFWorkbook] = {
     templateStreamMap.mapValues { streamResource =>
@@ -62,13 +33,25 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
   // Cache of cell styles to avoid duplicating copied cell styles across various templates in the output workbook.
   private val cellStyleCache: mutable.HashMap[CellStyle, Int] = new mutable.HashMap[CellStyle, Int]
 
-  private def getNumColumns(sheet: Sheet) = {
-    sheet.rowIterator().asScala
-      .map(row => row.getLastCellNum.toInt)
-      .foldRight(0) {
-        Math.max
+  // We use an InputStream instead of a File when creating the XSSFWorkbook to ensure that the read file is not
+  // written to at all. When using a File, XSSFWorkbook#close() will actually modify the last access timestamp of
+  // the file unnecessarily and become annoying for git diffs. Using InputStream here ensures that this does
+  // not happen (setting the file as readonly is not enough, XSSFWorkbook#close() will still try to write and actually
+  // raise an exception.
+  // Apache POI documentation warns against using the InputStream because it actually has a bigger memory footprint
+  // than using an XSSFWorkbook with a File, but for our purposes which are just to open and copy small templates, this
+  // shouldn't be a problem.
+  def putPictures(templateName: String): Unit = {
+    val templateWorkbook: XSSFWorkbook = excelTemplateWorkbooks(templateName)
+
+    templateWorkbook.sheetIterator().asScala
+      .map(sheet => sheet.asInstanceOf[XSSFSheet])
+      .foreach { templateSheet: XSSFSheet =>
+        val outputSheet = outputExcelWorkbook.getSheet(templateSheet.getSheetName)
+        copyPicturesToSheet(templateSheet, outputSheet)
       }
   }
+
 
   // copyAndSubstitute copies the template workbook given by templateName to the output workbook in a
   // buffered streamed manner, using substitutionMap to make any key value substitutions that are encountered
@@ -79,7 +62,7 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
   def copyAndSubstitute(templateName: String, substitutionMap: ExportModelUtils.ModelMap = Map.empty): Iterable[(String, Option[Int])] = {
     // We expect every template workbook to only have 1 sheet - this allows us to be more
     // flexible with what templates we want to load into memory via the XSSF api.
-    excelTemplateWorkbooks(templateName).sheetIterator()
+    val indices = excelTemplateWorkbooks(templateName).sheetIterator()
       .asScala
       .toVector
       .map { templateSheet =>
@@ -94,25 +77,8 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
         }
         (sheetName, index)
       }
-  }
-
-  private def copyAndSubstitute(templateSheet: Sheet, outputSheet: SXSSFSheet, substitutionMap: ModelMap): Option[Int] = {
-    // Get each template row and its corresponding row index and use the given substitutionMap to copy them
-    // over to the output workbook. If we find a placeholder repeated row in the template, then we return that
-    // row's index to be returned to the caller who will use it to start inserting repeated rows.
-    // We need to explicitly break and return at this point in order to ensure that no further rows are written
-    // and the stream's pointer is not advanced.
-    templateSheet.iterator().asScala
-      .foldLeft(Option.empty[Int]) { (acc: Option[Int], templateRow: Row) =>
-        val rowIndex = templateRow.getRowNum
-        if (!isRepeatedRow(templateRow)) {
-          val outputRow = outputSheet.createRow(rowIndex)
-          populateRowFromTemplate(templateRow, outputRow, templateSheet, outputSheet, substitutionMap)
-          acc
-        } else {
-          Some(rowIndex)
-        }
-      }
+    putPictures(templateName)
+    indices
   }
 
   // insertRows inserts the given rows into the given index position in the template
@@ -162,16 +128,14 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
   }
 
   // write writes the output workbook to the given OutputStream
-  def write(os: OutputStream): Try[Unit] = {
-    Try(outputExcelWorkbook.write(os))
+  def write(os: OutputStream): Try[Unit] = Try {
+    outputExcelWorkbook.write(os)
   }
 
   // close releases and closes all underlying resources of this ExcelWorkbook, namely the input
   // template workbooks and the output write workbook.
   def close(): Unit = {
-    excelTemplateWorkbooks.foreach {
-      case (_, wb) => wb.close()
-    }
+    excelTemplateWorkbooks.values.foreach(_.close())
 
     // dispose clears temporary files that back the workbook on disk
     outputExcelWorkbook.dispose()
@@ -180,6 +144,25 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
 
   private def isRepeatedRow(row: Row): Boolean = {
     row.getLastCellNum > 0 && isRepeatedCell(Option(row.getCell(0)))
+  }
+
+  private def copyAndSubstitute(templateSheet: Sheet, outputSheet: SXSSFSheet, substitutionMap: ModelMap): Option[Int] = {
+    // Get each template row and its corresponding row index and use the given substitutionMap to copy them
+    // over to the output workbook. If we find a placeholder repeated row in the template, then we return that
+    // row's index to be returned to the caller who will use it to start inserting repeated rows.
+    // We need to explicitly break and return at this point in order to ensure that no further rows are written
+    // and the stream's pointer is not advanced.
+    templateSheet.iterator().asScala
+      .foldLeft(Option.empty[Int]) { (acc: Option[Int], templateRow: Row) =>
+        val rowIndex = templateRow.getRowNum
+        if (!isRepeatedRow(templateRow)) {
+          val outputRow = outputSheet.createRow(rowIndex)
+          populateRowFromTemplate(templateRow, outputRow, templateSheet, outputSheet, substitutionMap)
+          acc
+        } else {
+          Some(rowIndex)
+        }
+      }
   }
 
   private def isRepeatedCell(cellOpt: Option[Cell]): Boolean = cellOpt match {
@@ -228,6 +211,7 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
           case CellDouble(double: Double) => outputCell.setCellValue(double)
           case CellDate(date: Date) => outputCell.setCellValue(date)
           case CellString(string: String) => outputCell.setCellValue(string)
+          case CellBoolean(bool: Boolean) => outputCell.setCellValue(bool)
           case _ => throw new NoSuchElementException(s"Unsupported cell type for key: $stringValue")
         }
       }
@@ -238,6 +222,42 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
     else {
       outputCell.setCellValue(stringValue)
     }
+  }
+
+  private def copyPicturesToSheet(templateSheet: XSSFSheet, outputSheet: Sheet): Unit = {
+    val outputWorkbook = outputSheet.getWorkbook
+    val templateImages = templateSheet.createDrawingPatriarch().getShapes.asScala
+      .filter(_.isInstanceOf[XSSFPicture])
+      .map(_.asInstanceOf[XSSFPicture])
+
+    templateImages.foreach { img: XSSFPicture =>
+      val drawing = outputSheet.createDrawingPatriarch()
+      val anchor = outputSheet.getWorkbook.getCreationHelper.createClientAnchor()
+      anchor.setAnchorType(ClientAnchor.AnchorType.MOVE_AND_RESIZE)
+      val imgData = img.getPictureData
+      val templateAnchor = img.getClientAnchor
+      val picIndex = outputWorkbook.addPicture(imgData.getData, imgData.getPictureType)
+
+      anchor.setCol1(templateAnchor.getCol1)
+      anchor.setCol2(templateAnchor.getCol2)
+      anchor.setRow1(templateAnchor.getRow1)
+      anchor.setRow2(templateAnchor.getRow2)
+      anchor.setDx1(templateAnchor.getDx1)
+      anchor.setDx2(templateAnchor.getDx2)
+      anchor.setDy1(templateAnchor.getDy1)
+      anchor.setDy2(templateAnchor.getDy2)
+
+      drawing.createPicture(anchor, picIndex)
+    }
+  }
+
+
+  private def getNumColumns(sheet: Sheet) = {
+    sheet.rowIterator().asScala
+      .map(row => row.getLastCellNum.toInt)
+      .foldRight(0) {
+        Math.max
+      }
   }
 
   private def applyCellStyleFromTemplate(from: Cell, to: Cell): Unit = {
