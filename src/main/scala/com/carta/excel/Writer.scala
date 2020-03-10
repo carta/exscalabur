@@ -1,11 +1,9 @@
 package com.carta.excel
 
 import java.io.{FileInputStream, FileOutputStream}
-import java.util.UUID.randomUUID
 
 import com.carta.excel.ExportModelUtils.ModelMap
-import com.carta.excel.Writer.getModelMap
-import com.carta.temp.{CellType, DataRow, DoubleCellType, LongCellType, StringCellType}
+import com.carta.exscalabur._
 import com.carta.yaml.{CellType, YamlEntry}
 import resource.{ManagedResource, managed}
 
@@ -56,9 +54,6 @@ object Writer {
           case Some(index) => workbook.insertRows(templateName, index, startIndex._1, index, modelMaps)
           case None =>
         }
-    }
-    tabs.foreach {
-      case TabParam(templateName: String, _, _, _, _) => workbook.putPictures(templateName)
     }
     // Writes the final workbook to the FileOutputStream with the given pathname, and then closes both the workbook and FileOutputStream
     workbook.write(fos)
