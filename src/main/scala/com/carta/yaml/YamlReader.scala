@@ -10,7 +10,7 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import scala.io.Source
 
 class YamlReader(private val mapper: ObjectMapper) {
-  private val parseTypeRef = new TypeReference[Map[String, KeyObjectBuilder]]() {}
+  private val parseTypeRef = new TypeReference[Map[String, EntryBuilder]]() {}
 
   def parse(file: File): Map[String, YamlEntry] = {
     val dataSource = Source.fromFile(file)
@@ -29,7 +29,7 @@ class YamlReader(private val mapper: ObjectMapper) {
       Map.empty
     }
     else {
-      val yamlMap: Map[String, KeyObjectBuilder] = mapper.readValue(content, parseTypeRef)
+      val yamlMap: Map[String, EntryBuilder] = mapper.readValue(content, parseTypeRef)
       yamlMap.map { case (yamlKey, keyObject) =>
         yamlKey -> keyObject.build()
       }

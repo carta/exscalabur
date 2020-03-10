@@ -9,7 +9,7 @@ case class YamlEntry
   excelType: CellType.Value
 )
 
-class KeyObjectBuilder(
+class EntryBuilder(
                         @JsonScalaEnumeration(classOf[KeyTypeReference])
                         var keyType: KeyType.Value,
 

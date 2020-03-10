@@ -55,9 +55,6 @@ object Writer {
           case None =>
         }
     }
-    tabs.foreach {
-      case TabParam(templateName: String, _, _, _, _) => workbook.putPictures(templateName)
-    }
     // Writes the final workbook to the FileOutputStream with the given pathname, and then closes both the workbook and FileOutputStream
     workbook.write(fos)
     workbook.close()

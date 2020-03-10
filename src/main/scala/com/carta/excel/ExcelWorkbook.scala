@@ -22,6 +22,15 @@ import scala.util.{Failure, Success, Try}
  * @param windowSize the number of rows that are kept in memory until flushed out, -1 means all records are available for random access .
  */
 class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[InputStream]], windowSize: Int) extends Closeable {
+  // We use an InputStream instead of a File when creating the XSSFWorkbook to ensure that the read file is not
+  // written to at all. When using a File, XSSFWorkbook#close() will actually modify the last access timestamp of
+  // the file unnecessarily and become annoying for git diffs. Using InputStream here ensures that this does
+  // not happen (setting the file as readonly is not enough, XSSFWorkbook#close() will still try to write and actually
+  // raise an exception.
+  // Apache POI documentation warns against using the InputStream because it actually has a bigger memory footprint
+  // than using an XSSFWorkbook with a File, but for our purposes which are just to open and copy small templates, this
+  // shouldn't be a problem.
+
 
   private val excelTemplateWorkbooks: Map[String, XSSFWorkbook] = {
     templateStreamMap.mapValues { streamResource =>
@@ -33,26 +42,6 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
   // Cache of cell styles to avoid duplicating copied cell styles across various templates in the output workbook.
   private val cellStyleCache: mutable.HashMap[CellStyle, Int] = new mutable.HashMap[CellStyle, Int]
 
-  // We use an InputStream instead of a File when creating the XSSFWorkbook to ensure that the read file is not
-  // written to at all. When using a File, XSSFWorkbook#close() will actually modify the last access timestamp of
-  // the file unnecessarily and become annoying for git diffs. Using InputStream here ensures that this does
-  // not happen (setting the file as readonly is not enough, XSSFWorkbook#close() will still try to write and actually
-  // raise an exception.
-  // Apache POI documentation warns against using the InputStream because it actually has a bigger memory footprint
-  // than using an XSSFWorkbook with a File, but for our purposes which are just to open and copy small templates, this
-  // shouldn't be a problem.
-  def putPictures(templateName: String): Unit = {
-    val templateWorkbook: XSSFWorkbook = excelTemplateWorkbooks(templateName)
-
-    templateWorkbook.sheetIterator().asScala
-      .map(sheet => sheet.asInstanceOf[XSSFSheet])
-      .foreach { templateSheet: XSSFSheet =>
-        val outputSheet = outputExcelWorkbook.getSheet(templateSheet.getSheetName)
-        copyPicturesToSheet(templateSheet, outputSheet)
-      }
-  }
-
-
   // copyAndSubstitute copies the template workbook given by templateName to the output workbook in a
   // buffered streamed manner, using substitutionMap to make any key value substitutions that are encountered
   // during copying.
@@ -62,9 +51,10 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
   def copyAndSubstitute(templateName: String, substitutionMap: ExportModelUtils.ModelMap = Map.empty): Iterable[(String, Option[Int])] = {
     // We expect every template workbook to only have 1 sheet - this allows us to be more
     // flexible with what templates we want to load into memory via the XSSF api.
-    val indices = excelTemplateWorkbooks(templateName).sheetIterator()
+    excelTemplateWorkbooks(templateName).sheetIterator()
       .asScala
       .toVector
+      .map(_.asInstanceOf[XSSFSheet])
       .map { templateSheet =>
         val sheetName = templateSheet.getSheetName
         val outputSheet = outputExcelWorkbook.createSheet(sheetName)
@@ -75,10 +65,9 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
         (0 until numColumns).foreach { i =>
           outputSheet.setColumnWidth(i, templateSheet.getColumnWidth(i))
         }
+        copyPicturesToSheet(templateSheet, outputSheet)
         (sheetName, index)
       }
-    putPictures(templateName)
-    indices
   }
 
   // insertRows inserts the given rows into the given index position in the template
@@ -142,6 +131,7 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
     outputExcelWorkbook.close()
   }
 
+  //TODO if any cell on row is repeated cell, return true
   private def isRepeatedRow(row: Row): Boolean = {
     row.getLastCellNum > 0 && isRepeatedCell(Option(row.getCell(0)))
   }
@@ -160,6 +150,7 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
           populateRowFromTemplate(templateRow, outputRow, templateSheet, outputSheet, substitutionMap)
           acc
         } else {
+          // only copies one repeated section at a time
           Some(rowIndex)
         }
       }
