@@ -59,7 +59,7 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
         val sheetName = templateSheet.getSheetName
         val outputSheet = outputExcelWorkbook.createSheet(sheetName)
 
-        val index = copyAndSubstitute(templateSheet, outputSheet, substitutionMap)
+        val index = substituteStaticRows(templateSheet, outputSheet, substitutionMap)
 
         val numColumns = getNumColumns(templateSheet)
         (0 until numColumns).foreach { i =>
@@ -136,7 +136,7 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
     row.getLastCellNum > 0 && isRepeatedCell(Option(row.getCell(0)))
   }
 
-  private def copyAndSubstitute(templateSheet: Sheet, outputSheet: SXSSFSheet, substitutionMap: ModelMap): Option[Int] = {
+  private def substituteStaticRows(templateSheet: Sheet, outputSheet: SXSSFSheet, substitutionMap: ModelMap): Option[Int] = {
     // Get each template row and its corresponding row index and use the given substitutionMap to copy them
     // over to the output workbook. If we find a placeholder repeated row in the template, then we return that
     // row's index to be returned to the caller who will use it to start inserting repeated rows.
