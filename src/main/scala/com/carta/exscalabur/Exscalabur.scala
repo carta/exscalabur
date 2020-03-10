@@ -2,7 +2,7 @@ package com.carta.exscalabur
 
 import java.io.File
 
-import com.carta.excel.{TabParam, TabType, Writer}
+import com.carta.excel.{SheetData, TabType, Writer}
 import com.carta.yaml.{YamlEntry, YamlReader}
 
 import scala.collection.mutable
@@ -18,6 +18,8 @@ class Exscalabur(outputPath: String, yamlPath: String) {
 
   val windowSize = 100
 
+  val writer = new Writer(windowSize)
+
   // TODO: I think this is actually add template
   def addTab(tabName: String, templatePath: String, data: DataRow, repeatedData: List[DataRow]): Exscalabur = {
     tabToRows.put(tabName, repeatedData)
@@ -27,12 +29,12 @@ class Exscalabur(outputPath: String, yamlPath: String) {
   }
 
   def writeExcelToDisk(): Unit = {
-    Writer.writeExcelFileToDisk(outputPath, windowSize, getTabParams(TabType.repeated, yamlData))
+    writer.writeExcelFileToDisk(outputPath, getTabParams(TabType.repeated, yamlData))
   }
 
   private def getTabParams(tabType: TabType.Value, yamlData: Map[String, YamlEntry]) = {
     val toTabParam = ((tabName: String, data: DataRow, repeatedData: List[DataRow], templatePath: String) => {
-      TabParam(tabName, templatePath, data, repeatedData, yamlData)
+      SheetData(tabName, templatePath, data, repeatedData, yamlData)
     }).tupled
 
     templateToStuff.map { z =>
