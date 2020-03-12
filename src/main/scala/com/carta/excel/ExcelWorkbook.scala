@@ -48,37 +48,6 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
   // Cache of cell styles to avoid duplicating copied cell styles across various templates in the output workbook.
   private val cellStyleCache: mutable.HashMap[CellStyle, Int] = new mutable.HashMap[CellStyle, Int]
 
-  // copyAndSubstitute copies the template workbook given by templateName to the output workbook in a
-  // buffered streamed manner, using substitutionMap to make any key value substitutions that are encountered
-  // during copying.
-  //
-  // Returns the current index within the template to start adding rows as expected by the template or
-  // None if this is the end of this template and no rows are expected to be inserted.
-  def copyAndSubstitute(templateName: String, substitutionMap: ExportModelUtils.ModelMap = Map.empty): Iterable[(String, Option[Int])] = {
-    // We expect every template workbook to only have 1 sheet - this allows us to be more
-    // flexible with what templates we want to load into memory via the XSSF api.
-    excelTemplateWorkbooks(templateName).sheetIterator()
-      .asScala
-      .toVector
-      .map(_.asInstanceOf[XSSFSheet])
-      .map { templateSheet =>
-        val sheetName = templateSheet.getSheetName
-        if (Option(outputExcelWorkbook.getSheet(sheetName)).isEmpty) {
-          outputExcelWorkbook.createSheet(sheetName)
-        }
-        val outputSheet = outputExcelWorkbook.getSheet(sheetName)
-
-        val index = substituteStaticRows(templateSheet, outputSheet, substitutionMap)
-
-        val numColumns = getNumColumns(templateSheet)
-        (0 until numColumns).foreach { i =>
-          outputSheet.setColumnWidth(i, templateSheet.getColumnWidth(i))
-        }
-        copyPicturesToSheet(templateSheet, outputSheet)
-        (sheetName, index)
-      }
-  }
-
   // insertRows inserts the given rows into the given index position in the template
   // indicated by the given templateName.
   //
@@ -91,7 +60,7 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
    * @param rows
    * @return
    */
-  def insertRows(templateName: String, templateRowIndex: Int, sheetName: String, outputStartIndex: Int, rows: Seq[ModelMap]): Try[Int] = {
+  def insertRows(templateName: String, templateRowIndex: Int, sheetName: String, outputStartIndex: Int, staticData: ModelMap, rows: Seq[ModelMap]): Try[Int] = {
     if (templateRowIndex < 0 || outputStartIndex < 0) {
       Failure(new IllegalArgumentException(s"Invalid indices - templateRowIndex=$templateRowIndex, outputStartIndex=$outputStartIndex"))
     }
@@ -115,10 +84,11 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
         }
         else {
           val outputRow = outputSheet.createRow(nextIndex)
-          populateRowFromTemplate(templateRow, outputRow, templateSheet, outputSheet, rows.head)
+          populateRowFromTemplate(templateRow, outputRow, templateSheet, outputSheet, staticData)
           nextIndex += 1
         }
       }
+      copyPicturesToSheet(templateSheet, outputSheet)
       Success(nextIndex)
     }
   }
@@ -142,26 +112,6 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
   //TODO if any cell on row is repeated cell, return true
   private def isRepeatedRow(row: Row): Boolean = {
     row.getLastCellNum > 0 && isRepeatedCell(Option(row.getCell(0)))
-  }
-
-  private def substituteStaticRows(templateSheet: Sheet, outputSheet: SXSSFSheet, substitutionMap: ModelMap): Option[Int] = {
-    // Get each template row and its corresponding row index and use the given substitutionMap to copy them
-    // over to the output workbook. If we find a placeholder repeated row in the template, then we return that
-    // row's index to be returned to the caller who will use it to start inserting repeated rows.
-    // We need to explicitly break and return at this point in order to ensure that no further rows are written
-    // and the stream's pointer is not advanced.
-    templateSheet.iterator().asScala
-      .foldLeft(Option.empty[Int]) { (acc: Option[Int], templateRow: Row) =>
-        val rowIndex = templateRow.getRowNum
-        if (!isRepeatedRow(templateRow)) {
-          val outputRow = outputSheet.createRow(rowIndex)
-          populateRowFromTemplate(templateRow, outputRow, templateSheet, outputSheet, substitutionMap)
-          acc
-        } else {
-          // only copies one repeated section at a time
-          return Some(rowIndex)
-        }
-      }
   }
 
   private def isRepeatedCell(cellOpt: Option[Cell]): Boolean = cellOpt match {
@@ -248,15 +198,6 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
 
       drawing.createPicture(anchor, picIndex)
     }
-  }
-
-
-  private def getNumColumns(sheet: Sheet) = {
-    sheet.rowIterator().asScala
-      .map(row => row.getLastCellNum.toInt)
-      .foldRight(0) {
-        Math.max
-      }
   }
 
   private def applyCellStyleFromTemplate(from: Cell, to: Cell): Unit = {

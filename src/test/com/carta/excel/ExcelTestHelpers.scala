@@ -9,6 +9,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.{Assertion, Succeeded}
 import resource.managed
 
+import scala.collection.JavaConverters._
 import scala.util.{Failure, Random, Success}
 
 object ExcelTestHelpers extends Matchers {
@@ -76,8 +77,8 @@ object ExcelTestHelpers extends Matchers {
   // This is useful for generating a template workbook which would contain the keys or an expected value workbook
   // which would contain the corresponding values instead that are expected.
   def generateTestWorkbook(name: String, rowModels: Seq[Iterable[(String, CellValue)]], insertRowModelKeys: Boolean = false): XSSFWorkbook = {
-    val workbook: XSSFWorkbook = new XSSFWorkbook()
-    val sheet: XSSFSheet = workbook.createSheet(name)
+    val workbook = new XSSFWorkbook()
+    val sheet = workbook.createSheet(name)
 
     rowModels.indices.foreach { i =>
       val templateRow = sheet.createRow(i)
@@ -94,7 +95,7 @@ object ExcelTestHelpers extends Matchers {
     randomInt(0xF).asInstanceOf[Byte]
   )
 
-  def getModelSeq(t: SubTemplateModel): Iterable[(String, CellValue)] = {
+  def getModelSeq(t: StaticTemplateModel): Iterable[(String, CellValue)] = {
     val modelSeqBuilder = List.newBuilder[(String, CellValue)]
     if (t.stringField.isDefined) {
       val cellString = ExportModelUtils.toCellStringFromString(t.stringField.get)
@@ -267,34 +268,36 @@ object ExcelTestHelpers extends Matchers {
                              dy1: Int = 0,
                              dy2: Int = 0)
 
-
   // writeOutputAndVerify creates and writes the contents of the given ByteArrayOutputStreams into an ExcelWorkbook
   // and then verifies that output of this ExcelWorkbook is as expected
-  def writeOutputAndVerify(
-                            templateName: String,
-                            templateStream: ByteArrayOutputStream,
-                            expectedStream: ByteArrayOutputStream,
-                            actualStream: ByteArrayOutputStream,
-                            expectedCopyResult: Option[Int],
-                            modelMaps: ExportModelUtils.ModelMap = Map.empty,
-                            repeatedModelsSeq: Seq[ExportModelUtils.ModelMap] = Seq(),
-                            batchSize: Int = 1000,
+  def writeOutputAndVerify(templateName: String,
+                           templateStream: ByteArrayOutputStream,
+                           expectedStream: ByteArrayOutputStream,
+                           actualStream: ByteArrayOutputStream,
+                           expectedCopyResult: Option[Int],
+                           staticRowData: ExportModelUtils.ModelMap = Map.empty,
+                           repeatedRowData: Seq[ExportModelUtils.ModelMap] = Seq.empty,
+                           batchSize: Int = 1000,
                           ): Unit = {
     val templateBytes = managed(new ByteArrayInputStream(templateStream.toByteArray))
     val templateStreamMap = Map(templateName -> templateBytes)
     managed(new ExcelWorkbook(templateStreamMap, 10))
-      .acquireAndGet { workbook: ExcelWorkbook =>
-        val z = workbook.copyAndSubstitute(templateName, modelMaps).map(_._2)
-        val rowIndexOpt = z.head
-        rowIndexOpt shouldEqual expectedCopyResult
-        rowIndexOpt.foreach { startRowIndex =>
-          val currRowIndex = startRowIndex
-          repeatedModelsSeq.grouped(batchSize).foreach { batch =>
-            workbook.insertRows(templateName, startRowIndex, templateName, currRowIndex, batch) match {
-              case Success(newRowIndex) => newRowIndex shouldBe currRowIndex + batch.length
-              case Failure(e) => fail(e)
+      .acquireAndGet { workbook =>
+        workbook.sheets(templateName).foreach { templateSheet =>
+          templateSheet.rowIterator().asScala
+            .foldLeft(0) { (outputRow, row) =>
+              workbook.insertRows(
+                templateName,
+                row.getRowNum,
+                templateSheet.getSheetName,
+                outputRow,
+                staticRowData,
+                repeatedRowData
+              ) match {
+                case Failure(e) => fail(e)
+                case Success(nextRow) => nextRow
+              }
             }
-          }
         }
         workbook.write(actualStream)
       }
@@ -362,7 +365,7 @@ object ExcelTestHelpers extends Matchers {
   /*
    * Test models to test substitution and repeated templates
    */
-  case class SubTemplateModel(stringField: Option[String], longField: Option[Long], doubleField: Option[Double])
+  case class StaticTemplateModel(stringField: Option[String], longField: Option[Long], doubleField: Option[Double])
 
   case class RepTemplateModel(stringField: Option[String], longField: Option[Long], doubleField: Option[Double])
 

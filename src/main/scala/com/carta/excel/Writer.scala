@@ -38,7 +38,7 @@ class Writer(val windowSize: Int) {
           var outputRow = 0
           templateSheet.rowIterator().asScala
             .foreach { row =>
-              workbook.insertRows(templateName, row.getRowNum, templateSheet.getSheetName, outputRow, repeatedDataModelMap) match {
+              workbook.insertRows(templateName, row.getRowNum, templateSheet.getSheetName, outputRow, staticDataModelMap, repeatedDataModelMap) match {
                 case Success(nextRow) => outputRow = nextRow
                 case Failure(e) => //log this
               }
