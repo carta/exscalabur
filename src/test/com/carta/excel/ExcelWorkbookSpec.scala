@@ -362,6 +362,50 @@ class ExcelWorkbookSpec extends AnyFlatSpec with Matchers {
     writeOutputAndVerify(templateName, templateStream, expectedStream, actualStream, Some(1), Map.empty, repeatedModelsSeq.map(_.toMap))
   }
 
+//  "ExcelWorkbook" should "copy repeated rows followed by static rows without overwriting" in {
+//    val templateName = "copyRepeatedThenStatic"
+//    val templateStream: ByteArrayOutputStream = new ByteArrayOutputStream()
+//    val expectedStream: ByteArrayOutputStream = new ByteArrayOutputStream()
+//    val actualStream: ByteArrayOutputStream = new ByteArrayOutputStream()
+//
+//    val repeatedModels = Seq(
+//      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+//      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+//      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+//      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+//      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+//    )
+//
+//    val lowerStaticModels = Seq(
+//      SubTemplateModel(Some("Test Word"), Some(5432), None)
+//    )
+//    val repeatedModelsSeq = repeatedModels.map(getModelSeq)
+//    val lowerStaticModelsSeq = lowerStaticModels.map(getModelSeq)
+//
+//    val templateRows: Seq[Iterable[(String, CellValue)]] = Seq(
+//      // Row with static text, empty cell, and number
+//      Seq(
+//        (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("text")),
+//        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1234)),
+//      )
+//    ) ++ repeatedModelsSeq ++ lowerStaticModelsSeq
+//
+//    val expectedRows = Seq(
+//      Seq(
+//        (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("text")),
+//        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1234))
+//      ),
+//    ) ++ repeatedModelsSeq ++ lowerStaticModelsSeq
+//
+//    ExcelTestHelpers.generateTestWorkbook(templateName, templateRows, insertRowModelKeys = true)
+//      .write(templateStream)
+//    ExcelTestHelpers.generateTestWorkbook(templateName, expectedRows)
+//      .write(expectedStream)
+//
+//
+//    writeOutputAndVerify(templateName, templateStream, expectedStream, actualStream, Some(1), Map.empty, repeatedModelsSeq.map(_.toMap))
+//  }
+
   private def getRandomCell(templateWorkbook: XSSFWorkbook, row: XSSFRow, index: Int): XSSFCell = {
     val style = ExcelTestHelpers.randomCellStyle(templateWorkbook)
     val cell = row.createCell(index)

@@ -1,69 +1,67 @@
 package com.carta.excel
 
-import java.io.{FileInputStream, FileOutputStream}
+import java.io.{FileInputStream, FileOutputStream, OutputStream}
 
 import com.carta.excel.ExportModelUtils.ModelMap
 import com.carta.exscalabur._
+
+import scala.collection.JavaConverters._
 import com.carta.yaml.{CellType, YamlEntry}
 import resource.{ManagedResource, managed}
 
+import scala.util.{Failure, Success}
 
-case class TabParam(tabName: String,
-                    templatePath: String,
-                    tabData: DataRow,
-                    repeatedTabData: List[DataRow],
-                    tabSchema: Map[String, YamlEntry]) {
+
+case class SheetData(sheetName: String,
+                     templatePath: String,
+                     staticData: Iterable[DataCell],
+                     repeatedData: List[DataRow],
+                     schema: Map[String, YamlEntry]) {
   def toStreamTuple: (String, ManagedResource[FileInputStream]) = {
-    (tabName, managed(new FileInputStream(templatePath)))
+    (sheetName, managed(new FileInputStream(templatePath)))
   }
 }
 
-object Writer {
+class Writer(val windowSize: Int) {
+  def writeExcelToStream(sheets: Iterable[SheetData], outputStream: OutputStream): Unit = {
+    val sheetNameToStreamMap = sheets.map(_.toStreamTuple).toMap
+    val workbook = new ExcelWorkbook(sheetNameToStreamMap, windowSize)
 
-  val template1 = "/Users/daviddufour/code/hackathon/exscalabur/src/resources/templates/tab1_template.xlsx"
-  val template2 = "/Users/daviddufour/code/hackathon/exscalabur/src/resources/templates/tab2_template.xlsx"
+    sheets.foreach {
+      case SheetData(templateName, _, tabData, repeatedTabData, tabSchema) =>
+        val staticDataModelMap = getModelMap(ExportModelUtils.SUBSTITUTION_KEY, tabSchema, tabData)
+        val repeatedDataModelMap = repeatedTabData.map { rowData =>
+          getModelMap(ExportModelUtils.REPEATED_FIELD_KEY, tabSchema, rowData) ++ staticDataModelMap
+        }
 
-  //TODO: restrict to supported types
-  def writeExcelFileToDisk(filePath: String, windowSize: Int, tabs: Iterable[TabParam]): Unit = {
-    // this should be parameter, just write to test/UUID.xlsx for now
-    val tabNameToStreamMap = tabs.map(_.toStreamTuple).toMap
-
-    val workbook = new ExcelWorkbook(tabNameToStreamMap, windowSize)
-    val fos = new FileOutputStream(filePath)
-
-    //    workbook.copyAndSubstitute("tab1_name", ExportModelUtils.getModelMap(12L))
-    //
-    //    val repeatedRowIndex = workbook.copyAndSubstitute("tab2_name", ExportModelUtils.getModelMap(24L))
-    //    writeRepeatedTabFuture(
-    //      repeatedRowIndex = repeatedRowIndex,
-    //      workbook = workbook,
-    //      tabName = "tabe2_name",
-    //      maps = List("a", "b", "c").map(ExportModelUtils.getModelMap))
-
-
-    tabs.foreach {
-      case TabParam(templateName: String,
-                    _,
-                    tabData: DataRow,
-                    repeatedTabData: List[DataRow],
-                    tabSchema: Map[String, YamlEntry]) =>
-        //TODO proper error handling on copyAndSubstitute
-        val startIndex = workbook.copyAndSubstitute(templateName, getModelMap(ExportModelUtils.SUBSTITUTION_KEY, tabSchema, tabData)).head
-        val modelMaps = repeatedTabData.map(rowData => getModelMap(ExportModelUtils.REPEATED_FIELD_KEY, tabSchema, rowData))
-        startIndex._2 match {
-          case Some(index) => workbook.insertRows(templateName, index, startIndex._1, index, modelMaps)
-          case None =>
+        workbook.sheets(templateName).foreach { templateSheet =>
+          var outputRow = 0
+          templateSheet.rowIterator().asScala
+            .foreach { row =>
+              workbook.insertRows(templateName, row.getRowNum, templateSheet.getSheetName, outputRow, repeatedDataModelMap) match {
+                case Success(nextRow) => outputRow = nextRow
+                case Failure(e) => //log this
+              }
+            }
         }
     }
-    // Writes the final workbook to the FileOutputStream with the given pathname, and then closes both the workbook and FileOutputStream
-    workbook.write(fos)
+    //TODO this returns a Try[Unit] -- error handling
+    workbook.write(outputStream)
     workbook.close()
-    fos.close()
+  }
+
+  def writeExcelFileToDisk(filePath: String, sheets: Iterable[SheetData]): Unit = {
+    val outputStream = new FileOutputStream(filePath)
+    writeExcelToStream(sheets, outputStream)
+    outputStream.close()
   }
 
   private def getModelMap(keyType: String, tabSchema: Map[String, YamlEntry], dataRow: DataRow): ModelMap = {
-    dataRow.data.map { case (key: String, value: CellType) =>
-      println(tabSchema)
+    this.getModelMap(keyType, tabSchema, dataRow.getCells)
+  }
+
+  private def getModelMap(keyType: String, tabSchema: Map[String, YamlEntry], dataRow: Iterable[DataCell]): ModelMap = {
+    dataRow.map(_.asTuple).map { case (key: String, value: CellType) =>
       val newKey = s"${keyType}.$key"
       val newValue = tabSchema(newKey) match {
         // TODO different input output types
@@ -78,19 +76,5 @@ object Writer {
       }
       newKey -> newValue
     }
-  }
-
-  //  private def writeRepeatedTabFuture(repeatedRowIndex: Option[Int], workbook: ExcelWorkbook, tabName: String, maps: List[ModelMap]): Int = {
-  //    repeatedRowIndex match {
-  //      case Some(startingIndex) =>
-  //        workbook.insertRows(tabName,
-  //                            startingIndex,
-  //                            startingIndex,
-  //                            maps) match {
-  //          case Success(value: Int) => value
-  //          case Failure(exception) => throw exception
-  //        }
-  //      case None => throw new Exception(s"No repeated row for tab $tabName")
-  //    }
-  //  }
+  }.toMap
 }

@@ -282,19 +282,16 @@ object ExcelTestHelpers extends Matchers {
                           ): Unit = {
     val templateBytes = managed(new ByteArrayInputStream(templateStream.toByteArray))
     val templateStreamMap = Map(templateName -> templateBytes)
-
     managed(new ExcelWorkbook(templateStreamMap, 10))
       .acquireAndGet { workbook: ExcelWorkbook =>
         val z = workbook.copyAndSubstitute(templateName, modelMaps).map(_._2)
         val rowIndexOpt = z.head
         rowIndexOpt shouldEqual expectedCopyResult
         rowIndexOpt.foreach { startRowIndex =>
-          var currRowIndex = startRowIndex
+          val currRowIndex = startRowIndex
           repeatedModelsSeq.grouped(batchSize).foreach { batch =>
             workbook.insertRows(templateName, startRowIndex, templateName, currRowIndex, batch) match {
-              case Success(newRowIndex) =>
-                newRowIndex shouldBe currRowIndex + batch.length
-                currRowIndex = newRowIndex
+              case Success(newRowIndex) => newRowIndex shouldBe currRowIndex + batch.length
               case Failure(e) => fail(e)
             }
           }

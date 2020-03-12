@@ -31,13 +31,19 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
   // than using an XSSFWorkbook with a File, but for our purposes which are just to open and copy small templates, this
   // shouldn't be a problem.
 
+  private val outputExcelWorkbook: SXSSFWorkbook = new SXSSFWorkbook(windowSize)
 
   private val excelTemplateWorkbooks: Map[String, XSSFWorkbook] = {
     templateStreamMap.mapValues { streamResource =>
       streamResource.acquireAndGet(stream => new XSSFWorkbook(stream))
     }
   }
-  private val outputExcelWorkbook: SXSSFWorkbook = new SXSSFWorkbook(windowSize)
+
+  def sheets(templateName: String): Seq[Sheet] = {
+    excelTemplateWorkbooks(templateName).sheetIterator()
+      .asScala
+      .toVector
+  }
 
   // Cache of cell styles to avoid duplicating copied cell styles across various templates in the output workbook.
   private val cellStyleCache: mutable.HashMap[CellStyle, Int] = new mutable.HashMap[CellStyle, Int]
@@ -57,7 +63,10 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
       .map(_.asInstanceOf[XSSFSheet])
       .map { templateSheet =>
         val sheetName = templateSheet.getSheetName
-        val outputSheet = outputExcelWorkbook.createSheet(sheetName)
+        if (Option(outputExcelWorkbook.getSheet(sheetName)).isEmpty) {
+          outputExcelWorkbook.createSheet(sheetName)
+        }
+        val outputSheet = outputExcelWorkbook.getSheet(sheetName)
 
         val index = substituteStaticRows(templateSheet, outputSheet, substitutionMap)
 
@@ -82,39 +91,38 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
    * @param rows
    * @return
    */
-  def insertRows(templateName: String, templateRowIndex: Int, tabName: String, outputStartIndex: Int, rows: Seq[ExportModelUtils.ModelMap]): Try[Int] = {
-    // Indices are invalid
+  def insertRows(templateName: String, templateRowIndex: Int, sheetName: String, outputStartIndex: Int, rows: Seq[ModelMap]): Try[Int] = {
     if (templateRowIndex < 0 || outputStartIndex < 0) {
-      Failure(new IllegalArgumentException(s"Invalid Indices templateRowIndex=$templateRowIndex outputStartIndex=$outputStartIndex"))
+      Failure(new IllegalArgumentException(s"Invalid indices - templateRowIndex=$templateRowIndex, outputStartIndex=$outputStartIndex"))
     }
-    // Template name does not correspond to a valid template workbook
     else if (!excelTemplateWorkbooks.contains(templateName)) {
-      //logger.warn(s"No valid template workbook found for template name: ${templateName}")
       Failure(new IllegalArgumentException(s"No valid template workbook found for template name: ${templateName}"))
     }
     else {
-      val templateSheet: XSSFSheet = excelTemplateWorkbooks(templateName).getSheet(tabName)
-      val outputSheet: SXSSFSheet = outputExcelWorkbook.getSheet(tabName)
-
-      Option(templateSheet.getRow(templateRowIndex)) match {
-        case Some(templateRepeatedRow) =>
-          for (rowIndex <- 0 until rows.length) {
-            try {
-              val outputRow = outputSheet.createRow(outputStartIndex + rowIndex)
-              populateRowFromTemplate(templateRepeatedRow, outputRow, templateSheet, outputSheet, rows(rowIndex))
-            } catch {
-              case e: IllegalArgumentException =>
-              //logger.warn(s"Failed to create row at index ${outputStartIndex + rowIndex} in output workbook because row is already created")
-            }
-          }
-          Success(outputStartIndex + rows.length)
-
-        case None =>
-          //logger.warn(s"No valid template row to base repeated rows on found for template ${templateName} at index ${templateRowIndex}")
-          Failure(new NoSuchElementException(s"No valid template row to base repeated rows on found for template ${templateName} at index ${templateRowIndex}"))
+      val templateSheet = excelTemplateWorkbooks(templateName).getSheet(sheetName)
+      if (Option(outputExcelWorkbook.getSheet(sheetName)).isEmpty) {
+        outputExcelWorkbook.createSheet(sheetName)
       }
+      val outputSheet = outputExcelWorkbook.getSheet(sheetName)
+      var nextIndex = outputStartIndex
+      Option(templateSheet.getRow(templateRowIndex)).foreach { templateRow =>
+        if (isRepeatedRow(templateRow)) {
+          rows.foreach{ modelMap =>
+            val outputRow = outputSheet.createRow(nextIndex)
+            populateRowFromTemplate(templateRow, outputRow, templateSheet, outputSheet, modelMap)
+            nextIndex += 1
+          }
+        }
+        else {
+          val outputRow = outputSheet.createRow(nextIndex)
+          populateRowFromTemplate(templateRow, outputRow, templateSheet, outputSheet, rows.head)
+          nextIndex += 1
+        }
+      }
+      Success(nextIndex)
     }
   }
+
 
   // write writes the output workbook to the given OutputStream
   def write(os: OutputStream): Try[Unit] = Try {
@@ -151,7 +159,7 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
           acc
         } else {
           // only copies one repeated section at a time
-          Some(rowIndex)
+          return Some(rowIndex)
         }
       }
   }
