@@ -1,6 +1,6 @@
 package com.carta
 
-import com.carta.exscalabur.{DataRow, Exscalabur}
+import com.carta.exscalabur.{DataCell, DataRow, Exscalabur}
 
 import scala.collection.immutable
 
@@ -8,7 +8,7 @@ object Main extends App {
   val sword = new Exscalabur(
     "/Users/jacksonlo/Downloads/exscalabur.xlsx",
     "/Users/jacksonlo/Dev/exscalabur/src/test/resources/test.yaml"
-    )
+  )
 
   val row1 = DataRow.Builder()
     .addCell("string", "foo")
@@ -16,11 +16,11 @@ object Main extends App {
     .addCell("dates", 1581028273)
     .build()
 
-  val single = DataRow.Builder()
-      .addCell("company_name", "2019 Q1 HACKATHON")
-      .addCell("coop_one", "Ziyad AlYafi")
-      .addCell("coop_two", "Het Kataria")
-    .build()
+  val single = Vector(
+    DataCell("company_name", "2019 Q1 HACKATHON"),
+    DataCell("coop_one", "Ziyad AlYafi"),
+    DataCell("coop_two", "Het Kataria")
+  )
 
   val animals = List("bear", "eagle", "elephant", "bird", "snake", "pig", "dog", "cat", "penguin", "anteater");
   val numbers = List(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);

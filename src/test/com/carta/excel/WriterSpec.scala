@@ -39,7 +39,7 @@ class WriterSpec extends AnyFlatSpec with Matchers {
     val sheetData = SheetData(
       sheetName = "Sheet1",
       templatePath = getClass.getResource("/excel/templates/writerSpec.xlsx").getFile,
-      staticData = staticData,
+      staticData = staticData.getCells,
       repeatedData = repeatedData,
       schema
     )
@@ -81,7 +81,7 @@ class WriterSpec extends AnyFlatSpec with Matchers {
     val sheetData = SheetData(
       sheetName = "Sheet1",
       templatePath = getClass.getResource("/excel/templates/writerSpec.xlsx").getFile,
-      staticData = staticData,
+      staticData = staticData.getCells,
       repeatedData = repeatedData,
       schema = schema
     )

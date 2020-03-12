@@ -3,7 +3,7 @@ package com.carta.excel
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.util.Date
 
-import com.carta.excel.ExcelTestHelpers.{PictureData, PicturePosition, RepTemplateModel, SubTemplateModel, generateTestWorkbook, getModelSeq, writeOutputAndVerify}
+import com.carta.excel.ExcelTestHelpers.{PictureData, PicturePosition, RepTemplateModel, StaticTemplateModel, generateTestWorkbook, getModelSeq, writeOutputAndVerify}
 import org.apache.poi.ss.usermodel.{CellType, Workbook}
 import org.apache.poi.xssf.usermodel.{XSSFCell, XSSFRow, XSSFSheet, XSSFWorkbook}
 import org.scalatest.flatspec.AnyFlatSpec
@@ -185,11 +185,11 @@ class ExcelWorkbookSpec extends AnyFlatSpec with Matchers {
 
   "ExcelWorkbook" should "do substitution from keys in template workbook to output workbook (happy path)" in {
     val templateName = "substitutionHappyPath"
-    val templateStream: ByteArrayOutputStream = new ByteArrayOutputStream()
-    val expectedStream: ByteArrayOutputStream = new ByteArrayOutputStream()
-    val actualStream: ByteArrayOutputStream = new ByteArrayOutputStream()
+    val templateStream = new ByteArrayOutputStream()
+    val expectedStream = new ByteArrayOutputStream()
+    val actualStream = new ByteArrayOutputStream()
 
-    val model: SubTemplateModel = SubTemplateModel(Some("text"), Some(1234), Some(1234))
+    val model: StaticTemplateModel = StaticTemplateModel(Some("text"), Some(1234), Some(1234))
     val modelSeq = getModelSeq(model)
 
     // Build template
@@ -204,9 +204,9 @@ class ExcelWorkbookSpec extends AnyFlatSpec with Matchers {
       modelSeq,
     )
 
-    val templateWorkbook: XSSFWorkbook = generateTestWorkbook(templateName, templateRows, insertRowModelKeys = true)
+    val templateWorkbook = generateTestWorkbook(templateName, templateRows, insertRowModelKeys = true)
     templateWorkbook.write(templateStream)
-    val expectedWorkbook: XSSFWorkbook = generateTestWorkbook(templateName, templateRows)
+    val expectedWorkbook = generateTestWorkbook(templateName, templateRows)
     expectedWorkbook.write(expectedStream)
 
     writeOutputAndVerify(templateName, templateStream, expectedStream, actualStream, None, modelSeq.toMap)
@@ -218,7 +218,7 @@ class ExcelWorkbookSpec extends AnyFlatSpec with Matchers {
     val expectedStream: ByteArrayOutputStream = new ByteArrayOutputStream()
     val actualStream: ByteArrayOutputStream = new ByteArrayOutputStream()
 
-    val model: SubTemplateModel = SubTemplateModel(Some("text"), Some(1234), Some(1234))
+    val model: StaticTemplateModel = StaticTemplateModel(Some("text"), Some(1234), Some(1234))
     val modelSeq = getModelSeq(model)
 
     // Build template
@@ -247,7 +247,7 @@ class ExcelWorkbookSpec extends AnyFlatSpec with Matchers {
     val expectedStream: ByteArrayOutputStream = new ByteArrayOutputStream()
     val actualStream: ByteArrayOutputStream = new ByteArrayOutputStream()
 
-    val model: SubTemplateModel = SubTemplateModel(Some("text"), None, Some(1234))
+    val model: StaticTemplateModel = StaticTemplateModel(Some("text"), None, Some(1234))
     val modelSeq = getModelSeq(model)
 
     val templateRows = Seq(
@@ -287,7 +287,7 @@ class ExcelWorkbookSpec extends AnyFlatSpec with Matchers {
     val expectedStream = new ByteArrayOutputStream()
     val actualStream = new ByteArrayOutputStream()
 
-    val model = SubTemplateModel(Some("text"), Some(1234), Some(1234))
+    val model = StaticTemplateModel(Some("text"), Some(1234), Some(1234))
     val modelSeq = getModelSeq(model)
 
     // Build template
@@ -360,6 +360,53 @@ class ExcelWorkbookSpec extends AnyFlatSpec with Matchers {
       .write(expectedStream)
 
     writeOutputAndVerify(templateName, templateStream, expectedStream, actualStream, Some(1), Map.empty, repeatedModelsSeq.map(_.toMap))
+  }
+
+  "ExcelWorkbook" should "copy repeated rows followed by static rows without overwriting" in {
+    val templateName = "copyRepeatedThenStatic"
+    val templateStream: ByteArrayOutputStream = new ByteArrayOutputStream()
+    val expectedStream: ByteArrayOutputStream = new ByteArrayOutputStream()
+    val actualStream: ByteArrayOutputStream = new ByteArrayOutputStream()
+
+
+    val repeatedModels = Seq(
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+    )
+
+    val lowerStaticModels = Seq(
+      StaticTemplateModel(Some("Test Word"), Some(5432), None)
+    )
+    val repeatedModelsSeq = repeatedModels.map(getModelSeq)
+    val lowerStaticModelsSeq = lowerStaticModels.map(getModelSeq)
+
+    val templateRows: Seq[Iterable[(String, CellValue)]] = Seq(
+      // Row with static text, empty cell, and number
+      Seq(
+        (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("text")),
+        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1234)),
+      ),
+      repeatedModelsSeq.head,
+      lowerStaticModelsSeq.head
+    )
+
+    val expectedRows = Seq(
+      Seq(
+        (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("text")),
+        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1234))
+      ),
+    ) ++ repeatedModelsSeq ++ lowerStaticModelsSeq
+
+    ExcelTestHelpers.generateTestWorkbook(templateName, templateRows, insertRowModelKeys = true)
+      .write(templateStream)
+    ExcelTestHelpers.generateTestWorkbook(templateName, expectedRows)
+      .write(expectedStream)
+
+
+    writeOutputAndVerify(templateName, templateStream, expectedStream, actualStream, Some(1), lowerStaticModelsSeq.head.toMap, repeatedModelsSeq.map(_.toMap))
   }
 
   private def getRandomCell(templateWorkbook: XSSFWorkbook, row: XSSFRow, index: Int): XSSFCell = {
