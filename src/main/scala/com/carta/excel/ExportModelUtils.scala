@@ -12,6 +12,7 @@ object ExportModelUtils {
 
   def toCellStringFromString(string: String): CellValue = CellString(string)
 
+  def toCellDouble(num: Number): CellValue = CellDouble(num.doubleValue)
   // to CellDouble Option converters
   def toCellDoubleFromDouble(double: Double): CellValue = CellDouble(double)
 
