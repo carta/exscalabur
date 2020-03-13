@@ -5,7 +5,7 @@ import java.util.Date
 
 import com.carta.excel.ExportModelUtils.ModelMap
 import org.apache.poi.ss.usermodel._
-import org.apache.poi.xssf.streaming.{SXSSFSheet, SXSSFWorkbook}
+import org.apache.poi.xssf.streaming.SXSSFWorkbook
 import org.apache.poi.xssf.usermodel.{XSSFPicture, XSSFSheet, XSSFWorkbook}
 
 import scala.collection.JavaConverters._
@@ -39,58 +39,69 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
     }
   }
 
-  def sheets(templateName: String): Seq[Sheet] = {
-    excelTemplateWorkbooks(templateName).sheetIterator()
-      .asScala
-      .toVector
-  }
+  private val cellStyleCache = mutable.Map.empty[CellStyle, Int]
 
-  // Cache of cell styles to avoid duplicating copied cell styles across various templates in the output workbook.
-  private val cellStyleCache: mutable.HashMap[CellStyle, Int] = new mutable.HashMap[CellStyle, Int]
 
-  // insertRows inserts the given rows into the given index position in the template
-  // indicated by the given templateName.
-  //
-  // Returns the index position to insert the next Seq of rows to the template or None if there are
-  // no more rows expected to be inserted.
-  /**
-   * @param templateName
-   * @param templateRowIndex index at which to get the style from the template sheet
-   * @param outputStartIndex index at where to start writing outputs
-   * @param rows
-   * @return
+  /** Copies a row from the template worksheet under templateName to the output sheet (creating one if none exist).
+   *
+   * If the to-be-copied row is a "static" row, data from staticData will be substituted into cells with matching keys,
+   * otherwise, will be copied as is. In this case, the returned value will be one more than the outputStartIndex
+   *
+   * If the to-be-copied row is a "repeated" row, data from repeatedRows will be substituted into cells with matching keys.
+   * A new row in the output sheet will be created for each data element found in repeatedData for that key. In which case,
+   * the returned value will be outputStartIndex + repeatedData.length
+   *
+   * @param templateName     sheet from template workbook to copy data from, and write data to in output workbook
+   * @param templateRowIndex current index of template to write to
+   * @param outputStartIndex current index of output sheet to write to
+   * @param staticData       Map of static data keys to their corresponding values
+   * @param repeatedData     List of Maps from repeated data keys to their corresponding values
+   * @return the next row in the output sheet to write to
    */
-  def insertRows(templateName: String, templateRowIndex: Int, sheetName: String, outputStartIndex: Int, staticData: ModelMap, rows: Seq[ModelMap]): Try[Int] = {
+  def insertRows(templateName: String,
+                 templateRowIndex: Int,
+                 sheetName: String,
+                 outputStartIndex: Int,
+                 staticData: ModelMap,
+                 repeatedData: Seq[ModelMap]): Try[Int] = {
     if (templateRowIndex < 0 || outputStartIndex < 0) {
       Failure(new IllegalArgumentException(s"Invalid indices - templateRowIndex=$templateRowIndex, outputStartIndex=$outputStartIndex"))
     }
     else if (!excelTemplateWorkbooks.contains(templateName)) {
-      Failure(new IllegalArgumentException(s"No valid template workbook found for template name: ${templateName}"))
+      Failure(new IllegalArgumentException(s"No valid template workbook found for template name: $templateName"))
     }
     else {
       val templateSheet = excelTemplateWorkbooks(templateName).getSheet(sheetName)
-      if (Option(outputExcelWorkbook.getSheet(sheetName)).isEmpty) {
-        outputExcelWorkbook.createSheet(sheetName)
-      }
-      val outputSheet = outputExcelWorkbook.getSheet(sheetName)
-      var nextIndex = outputStartIndex
-      Option(templateSheet.getRow(templateRowIndex)).foreach { templateRow =>
-        if (isRepeatedRow(templateRow)) {
-          rows.foreach{ modelMap =>
-            val outputRow = outputSheet.createRow(nextIndex)
-            populateRowFromTemplate(templateRow, outputRow, templateSheet, outputSheet, modelMap)
-            nextIndex += 1
+      val outputSheet = Option(outputExcelWorkbook.getSheet(sheetName))
+        .getOrElse(outputExcelWorkbook.createSheet(sheetName))
+
+      val nextIndex = Option(templateSheet.getRow(templateRowIndex))
+        .foldLeft(outputStartIndex) { (currStartIndex, templateRow) =>
+          if (isRepeatedRow(templateRow)) {
+            repeatedData.foldLeft(currStartIndex) { (currWriteIndex, modelMap) =>
+              createRow(outputSheet, templateSheet, templateRow, modelMap, currWriteIndex)
+              currWriteIndex + 1
+            }
+          }
+          else {
+            createRow(outputSheet, templateSheet, templateRow, staticData, currStartIndex)
+            currStartIndex + 1
           }
         }
-        else {
-          val outputRow = outputSheet.createRow(nextIndex)
-          populateRowFromTemplate(templateRow, outputRow, templateSheet, outputSheet, staticData)
-          nextIndex += 1
-        }
-      }
       copyPicturesToSheet(templateSheet, outputSheet)
       Success(nextIndex)
     }
+  }
+
+  private def createRow(outputSheet: Sheet, templateSheet: Sheet, templateRow: Row, modelMap: ModelMap, writeIndex: Int): Unit = {
+    val outputRow = outputSheet.createRow(writeIndex)
+    populateRowFromTemplate(templateRow, outputRow, templateSheet, outputSheet, modelMap)
+  }
+
+  def sheets(templateName: String): Seq[Sheet] = {
+    excelTemplateWorkbooks(templateName).sheetIterator()
+      .asScala
+      .toVector
   }
 
 
@@ -101,7 +112,7 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
 
   // close releases and closes all underlying resources of this ExcelWorkbook, namely the input
   // template workbooks and the output write workbook.
-  def close(): Unit = {
+  override def close(): Unit = {
     excelTemplateWorkbooks.values.foreach(_.close())
 
     // dispose clears temporary files that back the workbook on disk
@@ -109,16 +120,13 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
     outputExcelWorkbook.close()
   }
 
-  //TODO if any cell on row is repeated cell, return true
   private def isRepeatedRow(row: Row): Boolean = {
-    row.getLastCellNum > 0 && isRepeatedCell(Option(row.getCell(0)))
+    row.cellIterator().asScala.exists(isRepeatedCell)
   }
 
-  private def isRepeatedCell(cellOpt: Option[Cell]): Boolean = cellOpt match {
-    case None => false
-    case Some(cell) =>
-      CellType.STRING == cell.getCellType &&
-        cell.getStringCellValue.startsWith(ExportModelUtils.REPEATED_FIELD_KEY)
+  private def isRepeatedCell(cell: Cell): Boolean = {
+    CellType.STRING == cell.getCellType &&
+      cell.getStringCellValue.startsWith(ExportModelUtils.REPEATED_FIELD_KEY)
   }
 
   private def populateRowFromTemplate(templateRow: Row,
