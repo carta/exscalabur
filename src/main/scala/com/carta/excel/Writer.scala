@@ -3,9 +3,8 @@ package com.carta.excel
 import java.io.{FileInputStream, FileOutputStream, OutputStream}
 
 import com.carta.excel.ExportModelUtils.ModelMap
+import com.carta.excel.implicits.ExtendedSheet._
 import com.carta.exscalabur._
-
-import scala.collection.JavaConverters._
 import com.carta.yaml.{CellType, YamlEntry}
 import resource.{ManagedResource, managed}
 
@@ -35,11 +34,11 @@ class Writer(val windowSize: Int) {
         }
 
         workbook.sheets(templateName).foreach { templateSheet =>
-          var outputRow = 0
-          templateSheet.rowIterator().asScala
-            .foreach { row =>
-              workbook.insertRows(templateName, row.getRowNum, templateSheet.getSheetName, outputRow, staticDataModelMap, repeatedDataModelMap) match {
-                case Success(nextRow) => outputRow = nextRow
+          var outputRow = templateSheet.getFirstRowNum
+          templateSheet.getRowIndices
+            .foreach { rowIndex =>
+              workbook.insertRows(templateName, rowIndex, templateSheet.getSheetName, outputRow, staticDataModelMap, repeatedDataModelMap) match {
+                case Success(nextRow) =>  outputRow = nextRow
                 case Failure(e) => //log this
               }
             }
