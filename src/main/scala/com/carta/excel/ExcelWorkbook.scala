@@ -103,17 +103,10 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
   }
 
   private def shouldSkipRow(templateRow: Row, modelMap: ModelMap): Boolean = {
-    println(templateRow.getLastCellNum)
     templateRow.cellIterator().asScala.exists { cell =>
-      if (cell.getCellType != CellType.STRING) {
-        false
-      }
-      else if (!cell.getStringCellValue.startsWith(ExportModelUtils.REPEATED_FIELD_KEY)) {
-        false
-      }
-      else {
-        !modelMap.contains(cell.getStringCellValue)
-      }
+      cell.getCellType == CellType.STRING &&
+      cell.getStringCellValue.startsWith(ExportModelUtils.REPEATED_FIELD_KEY) &&
+      !modelMap.contains(cell.getStringCellValue)
     }
   }
 
