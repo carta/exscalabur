@@ -20,14 +20,35 @@ class AppendOnlySheetWriter
  cellStyleCache: mutable.Map[CellStyle, Int]) {
   var outputRowIndex: Int = templateSheet.getFirstRowNum
   var templateIndex: Int = templateSheet.getFirstRowNum
-  var initialWrite = false
   val outputSheet: Sheet = outputWorkbook.createSheet(templateSheet.getSheetName)
 
-  def writeData(staticData: Iterable[DataCell], repeatedData: Seq[DataRow], hasMoreDataForRow: Boolean = false) = {
-    if (!initialWrite) {
-      copyPicturesToSheet()
-    }
+  def copyPictures(): Unit = {
+    val templateImages = templateSheet.createDrawingPatriarch().getShapes.asScala
+      .filter(_.isInstanceOf[XSSFPicture])
+      .map(_.asInstanceOf[XSSFPicture])
 
+    templateImages.foreach { img: XSSFPicture =>
+      val drawing = outputSheet.createDrawingPatriarch()
+      val anchor = outputSheet.getWorkbook.getCreationHelper.createClientAnchor()
+      anchor.setAnchorType(ClientAnchor.AnchorType.MOVE_AND_RESIZE)
+      val imgData = img.getPictureData
+      val templateAnchor = img.getClientAnchor
+      val picIndex = outputWorkbook.addPicture(imgData.getData, imgData.getPictureType)
+
+      anchor.setCol1(templateAnchor.getCol1)
+      anchor.setCol2(templateAnchor.getCol2)
+      anchor.setRow1(templateAnchor.getRow1)
+      anchor.setRow2(templateAnchor.getRow2)
+      anchor.setDx1(templateAnchor.getDx1)
+      anchor.setDx2(templateAnchor.getDx2)
+      anchor.setDy1(templateAnchor.getDy1)
+      anchor.setDy2(templateAnchor.getDy2)
+
+      drawing.createPicture(anchor, picIndex)
+    }
+  }
+
+  def writeData(staticData: Iterable[DataCell], repeatedData: Seq[DataRow], hasMoreDataForRow: Boolean = false) = {
     val staticDataModelMap = getModelMap(ExportModelUtils.SUBSTITUTION_KEY, staticData)
     val repeatedDataModelMaps = repeatedData.map { dataRow =>
       getModelMap(ExportModelUtils.REPEATED_FIELD_KEY, dataRow.getCells) ++ staticDataModelMap
@@ -38,7 +59,6 @@ class AppendOnlySheetWriter
       .foldLeft(outputRowIndex) { (writeRowIndex: Int, templateRowIndex: Int) =>
         insertRows(writeRowIndex, templateRowIndex, staticDataModelMap, repeatedDataModelMaps, hasMoreDataForRow)
       }
-    initialWrite = true
   }
 
   private def insertRows(writeRowIndex: Int, templateRowIndex: Int, staticData: ModelMap, repeatedData: Iterable[ModelMap], hasMoreDataForRow: Boolean): Int = {
@@ -88,33 +108,6 @@ class AppendOnlySheetWriter
   private def createBlankRow(outputSheet: Sheet, index: Int): Unit = {
     outputSheet.createRow(index)
   }
-
-  private def copyPicturesToSheet(): Unit = {
-    val templateImages = templateSheet.createDrawingPatriarch().getShapes.asScala
-      .filter(_.isInstanceOf[XSSFPicture])
-      .map(_.asInstanceOf[XSSFPicture])
-
-    templateImages.foreach { img: XSSFPicture =>
-      val drawing = outputSheet.createDrawingPatriarch()
-      val anchor = outputSheet.getWorkbook.getCreationHelper.createClientAnchor()
-      anchor.setAnchorType(ClientAnchor.AnchorType.MOVE_AND_RESIZE)
-      val imgData = img.getPictureData
-      val templateAnchor = img.getClientAnchor
-      val picIndex = outputWorkbook.addPicture(imgData.getData, imgData.getPictureType)
-
-      anchor.setCol1(templateAnchor.getCol1)
-      anchor.setCol2(templateAnchor.getCol2)
-      anchor.setRow1(templateAnchor.getRow1)
-      anchor.setRow2(templateAnchor.getRow2)
-      anchor.setDx1(templateAnchor.getDx1)
-      anchor.setDx2(templateAnchor.getDx2)
-      anchor.setDy1(templateAnchor.getDy1)
-      anchor.setDy2(templateAnchor.getDy2)
-
-      drawing.createPicture(anchor, picIndex)
-    }
-  }
-
 
   private def createRow(templateRow: Row, modelMap: ModelMap, writeIndex: Int): Unit = {
     val outputRow = outputSheet.createRow(writeIndex)
