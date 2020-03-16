@@ -213,7 +213,9 @@ class AppendOnlySheetWriter
 }
 
 object AppendOnlySheetWriter {
-  def apply(templateSheet: XSSFSheet, outputSheet: SXSSFWorkbook, schema: Map[String, YamlEntry], cellStyleCache: mutable.Map[CellStyle, Int]): AppendOnlySheetWriter = {
-    new AppendOnlySheetWriter(templateSheet, outputSheet, schema, cellStyleCache)
+  def apply(templateSheet: XSSFSheet, outputWorkbook: SXSSFWorkbook, schema: Map[String, YamlEntry], cellStyleCache: mutable.Map[CellStyle, Int]): AppendOnlySheetWriter = {
+    val sheetWriter = new AppendOnlySheetWriter(templateSheet, outputWorkbook, schema, cellStyleCache)
+    sheetWriter.copyPictures()
+    sheetWriter
   }
 }

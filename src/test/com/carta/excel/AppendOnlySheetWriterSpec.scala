@@ -33,14 +33,13 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     (0 until 10).foreach(i => getRandomCell(templateWorkbook, row, i))
     templateWorkbook.write(templateStream)
 
-    val sheetWriter = new AppendOnlySheetWriter(
+    val sheetWriter = AppendOnlySheetWriter(
       templateSheet = templateWorkbook.getSheet(sheetName),
       outputWorkbook = outputWorkbook,
       schema = Map.empty,
       cellStyleCache = mutable.Map.empty
     )
     sheetWriter.writeData(Vector.empty, Vector.empty)
-    sheetWriter.copyPictures()
 
     outputWorkbook.write(actualStream)
 
@@ -60,14 +59,13 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     sheet.createRow(0)
     templateWorkbook.write(templateStream)
 
-    val sheetWriter = new AppendOnlySheetWriter(
+    val sheetWriter = AppendOnlySheetWriter(
       templateSheet = templateWorkbook.getSheet(sheetName),
       outputWorkbook = outputWorkbook,
       schema = Map.empty,
       cellStyleCache = mutable.Map.empty
     )
     sheetWriter.writeData(Vector.empty, Vector.empty)
-    sheetWriter.copyPictures()
 
     outputWorkbook.write(actualStream)
     val resultingWorkbook = new XSSFWorkbook(new ByteArrayInputStream(actualStream.toByteArray))
@@ -97,14 +95,13 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     ExcelTestHelpers.putPicture(sheet, picData)
     templateWorkbook.write(templateStream)
 
-    val sheetWriter = new AppendOnlySheetWriter(
+    val sheetWriter = AppendOnlySheetWriter(
       templateSheet = templateWorkbook.getSheet(sheetName),
       outputWorkbook = outputWorkbook,
       schema = Map.empty,
       cellStyleCache = mutable.Map.empty
     )
     sheetWriter.writeData(Vector.empty, Vector.empty)
-    sheetWriter.copyPictures()
 
     outputWorkbook.write(actualStream)
 
@@ -149,14 +146,13 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
 
     templateWorkbook.write(templateStream)
 
-    val sheetWriter = new AppendOnlySheetWriter(
+    val sheetWriter = AppendOnlySheetWriter(
       templateSheet = templateWorkbook.getSheet(sheetName),
       outputWorkbook = outputWorkbook,
       schema = Map.empty,
       cellStyleCache = mutable.Map.empty
     )
     sheetWriter.writeData(Vector.empty, Vector.empty)
-    sheetWriter.copyPictures()
     outputWorkbook.write(actualStream)
 
     val resultingWorkbook = new XSSFWorkbook(new ByteArrayInputStream(actualStream.toByteArray))
@@ -188,7 +184,7 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
 
     templateWorkbook.write(templateStream)
 
-    new AppendOnlySheetWriter(templateWorkbook.getSheet(sheetName), outputWorkbook, Map.empty, mutable.Map.empty)
+    AppendOnlySheetWriter(templateWorkbook.getSheet(sheetName), outputWorkbook, Map.empty, mutable.Map.empty)
       .writeData(Vector.empty, Vector.empty)
     outputWorkbook.write(actualStream)
 
@@ -218,7 +214,7 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
 
     templateWorkbook.write(templateStream)
 
-    new AppendOnlySheetWriter(templateWorkbook.getSheet(sheetName), outputWorkbook, Map.empty, mutable.Map.empty)
+    AppendOnlySheetWriter(templateWorkbook.getSheet(sheetName), outputWorkbook, Map.empty, mutable.Map.empty)
       .writeData(Vector.empty, Vector.empty)
     outputWorkbook.write(actualStream)
 
@@ -262,7 +258,7 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     val expectedWorkbook = generateTestWorkbook(sheetName, templateRows)
     expectedWorkbook.write(expectedStream)
 
-    new AppendOnlySheetWriter(templateWorkbook.getSheet(sheetName), outputWorkbook, modelSchema, mutable.Map.empty)
+    AppendOnlySheetWriter(templateWorkbook.getSheet(sheetName), outputWorkbook, modelSchema, mutable.Map.empty)
       .writeData(
         staticData = Vector(
           DataCell(s"string_field", "text"),
@@ -308,7 +304,7 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     expectedWorkbook.write(expectedStream)
 
 
-    new AppendOnlySheetWriter(templateWorkbook.getSheet(sheetName), outputWorkbook, modelSchema, mutable.Map.empty)
+    AppendOnlySheetWriter(templateWorkbook.getSheet(sheetName), outputWorkbook, modelSchema, mutable.Map.empty)
       .writeData(
         staticData = Vector(
           DataCell(s"string_field", "text"),
@@ -363,7 +359,7 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     val expectedWorkbook: XSSFWorkbook = ExcelTestHelpers.generateTestWorkbook(sheetName, expectedRows)
     expectedWorkbook.write(expectedStream)
 
-    new AppendOnlySheetWriter(templateWorkbook.getSheet(sheetName), outputWorkbook, modelSchema, mutable.Map.empty)
+    AppendOnlySheetWriter(templateWorkbook.getSheet(sheetName), outputWorkbook, modelSchema, mutable.Map.empty)
       .writeData(
         staticData = Vector(
           DataCell(s"string_field", "text"),
@@ -421,7 +417,7 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     ExcelTestHelpers.generateTestWorkbook(templateName, expectedRows)
       .write(expectedStream)
 
-    new AppendOnlySheetWriter(templateBook.getSheet(templateName), outputWorkbook, schema, mutable.Map.empty)
+    AppendOnlySheetWriter(templateBook.getSheet(templateName), outputWorkbook, schema, mutable.Map.empty)
       .writeData(
         staticData = Vector.empty,
         repeatedData = Vector(
@@ -490,7 +486,7 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     ExcelTestHelpers.generateTestWorkbook(templateName, expectedRows)
       .write(expectedStream)
 
-    new AppendOnlySheetWriter(templateBook.getSheet(templateName), outputWorkbook, schema, mutable.Map.empty)
+    AppendOnlySheetWriter(templateBook.getSheet(templateName), outputWorkbook, schema, mutable.Map.empty)
       .writeData(
         staticData = Vector(
           DataCell("string_field", "Test Word"),
