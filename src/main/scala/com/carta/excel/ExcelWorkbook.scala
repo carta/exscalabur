@@ -75,22 +75,43 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
       val outputSheet = Option(outputExcelWorkbook.getSheet(sheetName))
         .getOrElse(outputExcelWorkbook.createSheet(sheetName))
 
-      val nextIndex = Option(templateSheet.getRow(templateRowIndex))
-        .foldLeft(outputStartIndex) { (currStartIndex, templateRow) =>
+      val nextIndex = Option(templateSheet.getRow(templateRowIndex)) match {
+        case Some(templateRow) =>
           if (isRepeatedRow(templateRow)) {
-            repeatedData.foldLeft(currStartIndex) { (currWriteIndex, modelMap) =>
-              createRow(outputSheet, templateSheet, templateRow, modelMap, currWriteIndex)
-              currWriteIndex + 1
+            repeatedData.foldLeft(outputStartIndex) { (currWriteIndex, modelMap) =>
+              if (shouldSkipRow(templateRow, modelMap)) {
+                currWriteIndex
+              }
+              else {
+                createRow(outputSheet, templateSheet, templateRow, modelMap, currWriteIndex)
+                currWriteIndex + 1
+              }
             }
           }
           else {
-            createRow(outputSheet, templateSheet, templateRow, staticData, currStartIndex)
-            currStartIndex + 1
+            createRow(outputSheet, templateSheet, templateRow, staticData, outputStartIndex)
+            outputStartIndex + 1
           }
-        }
+        case None =>
+          createBlankRow(outputSheet, outputStartIndex)
+          outputStartIndex + 1
+      }
+
       copyPicturesToSheet(templateSheet, outputSheet)
       Success(nextIndex)
     }
+  }
+
+  private def shouldSkipRow(templateRow: Row, modelMap: ModelMap): Boolean = {
+    templateRow.cellIterator().asScala.exists { cell =>
+      cell.getCellType == CellType.STRING &&
+      cell.getStringCellValue.startsWith(ExportModelUtils.REPEATED_FIELD_KEY) &&
+      !modelMap.contains(cell.getStringCellValue)
+    }
+  }
+
+  private def createBlankRow(outputSheet: Sheet, index: Int): Unit = {
+    outputSheet.createRow(index)
   }
 
   private def createRow(outputSheet: Sheet, templateSheet: Sheet, templateRow: Row, modelMap: ModelMap, writeIndex: Int): Unit = {
