@@ -5,7 +5,9 @@ import java.io.{FileInputStream, FileOutputStream, OutputStream}
 import com.carta.excel.ExportModelUtils.ModelMap
 import com.carta.excel.implicits.ExtendedSheet._
 import com.carta.exscalabur._
-import com.carta.yaml.{CellType, YamlEntry}
+
+import scala.collection.JavaConverters._
+import com.carta.yaml.{YamlCellType, YamlEntry}
 import resource.{ManagedResource, managed}
 
 import scala.util.{Failure, Success}
@@ -64,13 +66,13 @@ class Writer(val windowSize: Int) {
       val newKey = s"${keyType}.$key"
       val newValue = tabSchema(newKey) match {
         // TODO different input output types
-        case YamlEntry(_, CellType.string, CellType.string) =>
+        case YamlEntry(_, YamlCellType.string, YamlCellType.string) =>
           ExportModelUtils.toCellStringFromString(value.asInstanceOf[StringCellType].value)
-        case YamlEntry(_, CellType.double, CellType.double) =>
+        case YamlEntry(_, YamlCellType.double, YamlCellType.double) =>
           ExportModelUtils.toCellDoubleFromDouble(value.asInstanceOf[DoubleCellType].value)
-        case YamlEntry(_, CellType.long, CellType.double) =>
+        case YamlEntry(_, YamlCellType.long, YamlCellType.double) =>
           ExportModelUtils.toCellDoubleFromLong(value.asInstanceOf[LongCellType].value)
-        case YamlEntry(_, CellType.long, CellType.date) =>
+        case YamlEntry(_, YamlCellType.long, YamlCellType.date) =>
           ExportModelUtils.toCellDateFromLong(value.asInstanceOf[LongCellType].value)
       }
       newKey -> newValue
