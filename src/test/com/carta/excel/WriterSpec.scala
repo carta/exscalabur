@@ -3,7 +3,7 @@ package com.carta.excel
 import java.io.{File, FileInputStream, FileOutputStream}
 
 import com.carta.exscalabur.DataRow
-import com.carta.yaml.{CellType, KeyType, YamlEntry}
+import com.carta.yaml.{YamlCellType, KeyType, YamlEntry}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -29,10 +29,10 @@ class WriterSpec extends AnyFlatSpec with Matchers {
     )
 
     val schema = Map(
-      "$KEY.col1" -> YamlEntry(KeyType.single, CellType.string, CellType.string),
-      "$KEY.col2" -> YamlEntry(KeyType.single, CellType.double, CellType.double),
-      "$REP.col1" -> YamlEntry(KeyType.repeated, CellType.string, CellType.string),
-      "$REP.col2" -> YamlEntry(KeyType.repeated, CellType.double, CellType.double),
+      "$KEY.col1" -> YamlEntry(KeyType.single, YamlCellType.string, YamlCellType.string),
+      "$KEY.col2" -> YamlEntry(KeyType.single, YamlCellType.double, YamlCellType.double),
+      "$REP.col1" -> YamlEntry(KeyType.repeated, YamlCellType.string, YamlCellType.string),
+      "$REP.col2" -> YamlEntry(KeyType.repeated, YamlCellType.double, YamlCellType.double),
     )
 
     val sheetData = SheetData(
@@ -71,10 +71,10 @@ class WriterSpec extends AnyFlatSpec with Matchers {
     )
 
     val schema = Map(
-      "$KEY.col1" -> YamlEntry(KeyType.single, CellType.string, CellType.string),
-      "$KEY.col2" -> YamlEntry(KeyType.single, CellType.double, CellType.double),
-      "$REP.col1" -> YamlEntry(KeyType.repeated, CellType.string, CellType.string),
-      "$REP.col2" -> YamlEntry(KeyType.repeated, CellType.double, CellType.double),
+      "$KEY.col1" -> YamlEntry(KeyType.single, YamlCellType.string, YamlCellType.string),
+      "$KEY.col2" -> YamlEntry(KeyType.single, YamlCellType.double, YamlCellType.double),
+      "$REP.col1" -> YamlEntry(KeyType.repeated, YamlCellType.string, YamlCellType.string),
+      "$REP.col2" -> YamlEntry(KeyType.repeated, YamlCellType.double, YamlCellType.double),
     )
 
     val sheetData = SheetData(
@@ -107,8 +107,8 @@ class WriterSpec extends AnyFlatSpec with Matchers {
     }
 
     val schema = Map(
-      "$REP.animal" -> YamlEntry(KeyType.repeated, CellType.string, CellType.string),
-      "$REP.weight" -> YamlEntry(KeyType.repeated, CellType.long, CellType.double),
+      "$REP.animal" -> YamlEntry(KeyType.repeated, YamlCellType.string, YamlCellType.string),
+      "$REP.weight" -> YamlEntry(KeyType.repeated, YamlCellType.long, YamlCellType.double),
     )
 
     val sheetData = SheetData(

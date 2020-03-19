@@ -3,6 +3,7 @@ package com.carta.excel
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, File, InputStream}
 import java.util.Date
 
+import com.carta.yaml.{KeyType, YamlCellType, YamlEntry}
 import org.apache.poi.ss.usermodel.{BorderStyle, CellStyle, CellType}
 import org.apache.poi.xssf.usermodel._
 import org.scalatest.matchers.should.Matchers
@@ -95,19 +96,36 @@ object ExcelTestHelpers extends Matchers {
     randomInt(0xF).asInstanceOf[Byte]
   )
 
+  def getModelSchema(t: StaticTemplateModel): Map[String, YamlEntry] = {
+    val schemaBuilder = Map.newBuilder[String, YamlEntry]
+    if (t.stringField.isDefined) {
+      val yamlEntry = YamlEntry(KeyType.single, YamlCellType.string, YamlCellType.string)
+      schemaBuilder += s"${ExportModelUtils.SUBSTITUTION_KEY}.string_field" -> yamlEntry
+    }
+    if (t.doubleField.isDefined) {
+      val yamlEntry = YamlEntry(KeyType.single, YamlCellType.double, YamlCellType.double)
+      schemaBuilder += s"${ExportModelUtils.SUBSTITUTION_KEY}.double_field" -> yamlEntry
+    }
+    if (t.longField.isDefined) {
+      val yamlEntry = YamlEntry(KeyType.single, YamlCellType.long, YamlCellType.double)
+      schemaBuilder += s"${ExportModelUtils.SUBSTITUTION_KEY}.long_field" -> yamlEntry
+    }
+    schemaBuilder.result()
+  }
+
   def getModelSeq(t: StaticTemplateModel): Iterable[(String, CellValue)] = {
     val modelSeqBuilder = List.newBuilder[(String, CellValue)]
     if (t.stringField.isDefined) {
       val cellString = ExportModelUtils.toCellStringFromString(t.stringField.get)
-      modelSeqBuilder += ((s"${ExportModelUtils.SUBSTITUTION_KEY}_string_field", cellString))
+      modelSeqBuilder += ((s"${ExportModelUtils.SUBSTITUTION_KEY}.string_field", cellString))
     }
     if (t.doubleField.isDefined) {
-      val cellDouble = ExportModelUtils.toCellDoubleFromDouble(t.doubleField.get)
-      modelSeqBuilder += ((s"${ExportModelUtils.SUBSTITUTION_KEY}_long_field", cellDouble))
+      val cellDouble = ExportModelUtils.toCellDouble(t.doubleField.get)
+      modelSeqBuilder += ((s"${ExportModelUtils.SUBSTITUTION_KEY}.double_field", cellDouble))
     }
     if (t.longField.isDefined) {
-      val cellLong = ExportModelUtils.toCellDoubleFromLong(t.longField.get)
-      modelSeqBuilder += ((s"${ExportModelUtils.SUBSTITUTION_KEY}_double_field", cellLong))
+      val cellLong = ExportModelUtils.toCellDouble(t.longField.get)
+      modelSeqBuilder += ((s"${ExportModelUtils.SUBSTITUTION_KEY}.long_field", cellLong))
     }
 
     modelSeqBuilder.result
@@ -117,15 +135,15 @@ object ExcelTestHelpers extends Matchers {
     val modelSeqBuilder = List.newBuilder[(String, CellValue)]
     if (r.stringField.isDefined) {
       val cellString = ExportModelUtils.toCellStringFromString(r.stringField.get)
-      modelSeqBuilder += ((s"${ExportModelUtils.REPEATED_FIELD_KEY}_string_field", cellString))
+      modelSeqBuilder += ((s"${ExportModelUtils.REPEATED_FIELD_KEY}.string_field", cellString))
     }
     if (r.doubleField.isDefined) {
       val cellDouble = ExportModelUtils.toCellDoubleFromDouble(r.doubleField.get)
-      modelSeqBuilder += ((s"${ExportModelUtils.REPEATED_FIELD_KEY}_long_field", cellDouble))
+      modelSeqBuilder += ((s"${ExportModelUtils.REPEATED_FIELD_KEY}.long_field", cellDouble))
     }
     if (r.longField.isDefined) {
       val cellLong = ExportModelUtils.toCellDoubleFromLong(r.longField.get)
-      modelSeqBuilder += ((s"${ExportModelUtils.REPEATED_FIELD_KEY}_double_field", cellLong))
+      modelSeqBuilder += ((s"${ExportModelUtils.REPEATED_FIELD_KEY}.double_field", cellLong))
     }
 
     modelSeqBuilder.result
@@ -159,7 +177,7 @@ object ExcelTestHelpers extends Matchers {
         val actualSheet = actualSheetOpt.get
 
         assert(expectedSheet.getSheetName == actualSheet.getSheetName)
-        assert(expectedSheet.getLastRowNum == actualSheet.getLastRowNum)
+        assert(actualSheet.getLastRowNum == expectedSheet.getLastRowNum)
 
         // XSSFSheet::getLastRowNum returns the index of the last row not the number of rows
         assert(List.range(0, expectedSheet.getLastRowNum + 1) map { rowIndex =>
