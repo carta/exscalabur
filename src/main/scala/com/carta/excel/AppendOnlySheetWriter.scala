@@ -74,8 +74,8 @@ class AppendOnlySheetWriter
           ExportModelUtils.toCellDateFromLong(value.asInstanceOf[LongCellType].value)
       }
       newKey -> newValue
-    }
-  }.toMap
+    }.toMap
+  }
 
   private def writeDataToRows(staticDataModelMap: ModelMap, repeatedDataModelMaps: Seq[ModelMap]): Int = {
     val insertRowsWithData = insertRows(staticDataModelMap, repeatedDataModelMaps) _
