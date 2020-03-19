@@ -39,7 +39,7 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
       schema = Map.empty,
       cellStyleCache = mutable.Map.empty
     )
-    sheetWriter.writeData(Vector.empty, Vector.empty)
+    sheetWriter.writeData(Iterator.empty)
 
     outputWorkbook.write(actualStream)
 
@@ -65,7 +65,7 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
       schema = Map.empty,
       cellStyleCache = mutable.Map.empty
     )
-    sheetWriter.writeData(Vector.empty, Vector.empty)
+    sheetWriter.writeData(Iterator.empty)
 
     outputWorkbook.write(actualStream)
     val resultingWorkbook = new XSSFWorkbook(new ByteArrayInputStream(actualStream.toByteArray))
@@ -101,7 +101,7 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
       schema = Map.empty,
       cellStyleCache = mutable.Map.empty
     )
-    sheetWriter.writeData(Vector.empty, Vector.empty)
+    sheetWriter.writeData(Iterator.empty)
 
     outputWorkbook.write(actualStream)
 
@@ -152,7 +152,7 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
       schema = Map.empty,
       cellStyleCache = mutable.Map.empty
     )
-    sheetWriter.writeData(Vector.empty, Vector.empty)
+    sheetWriter.writeData(Iterator.empty)
     outputWorkbook.write(actualStream)
 
     val resultingWorkbook = new XSSFWorkbook(new ByteArrayInputStream(actualStream.toByteArray))
@@ -185,7 +185,7 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     templateWorkbook.write(templateStream)
 
     AppendOnlySheetWriter(templateWorkbook.getSheet(sheetName), outputWorkbook, Map.empty, mutable.Map.empty)
-      .writeData(Vector.empty, Vector.empty)
+      .writeData(Iterator.empty)
     outputWorkbook.write(actualStream)
 
     // Verify that a new cellStyle was not created for every cell
@@ -215,7 +215,7 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     templateWorkbook.write(templateStream)
 
     AppendOnlySheetWriter(templateWorkbook.getSheet(sheetName), outputWorkbook, Map.empty, mutable.Map.empty)
-      .writeData(Vector.empty, Vector.empty)
+      .writeData(Iterator.empty)
     outputWorkbook.write(actualStream)
 
     // Assert that each column width in the result sheet is as expected
@@ -258,14 +258,21 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     val expectedWorkbook = generateTestWorkbook(sheetName, templateRows)
     expectedWorkbook.write(expectedStream)
 
-    AppendOnlySheetWriter(templateWorkbook.getSheet(sheetName), outputWorkbook, modelSchema, mutable.Map.empty)
-      .writeData(
-        staticData = Vector(
-          DataCell(s"string_field", "text"),
-          DataCell(s"long_field", 1234),
-          DataCell(s"double_field", 1234.0)),
-        repeatedData = Vector.empty
-      )
+    val sheetWriter = AppendOnlySheetWriter(
+      templateWorkbook.getSheet(sheetName),
+      outputWorkbook,
+      modelSchema,
+      mutable.Map.empty
+    )
+
+    sheetWriter.writeData(Iterator((
+      Vector(
+        DataCell(s"string_field", "text"),
+        DataCell(s"long_field", 1234),
+        DataCell(s"double_field", 1234.0)
+      ),
+      Vector.empty
+    )))
 
     outputWorkbook.write(actualStream)
 
@@ -303,17 +310,23 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     val expectedWorkbook: XSSFWorkbook = generateTestWorkbook(sheetName, templateRows)
     expectedWorkbook.write(expectedStream)
 
+    val data = Iterator((
+      Vector(
+        DataCell(s"string_field", "text"),
+        DataCell(s"long_field", 1234),
+        DataCell(s"double_field", 1234.0)
+      ),
+      Vector.empty
+    ))
 
-    AppendOnlySheetWriter(templateWorkbook.getSheet(sheetName), outputWorkbook, modelSchema, mutable.Map.empty)
-      .writeData(
-        staticData = Vector(
-          DataCell(s"string_field", "text"),
-          DataCell(s"long_field", 1234),
-          DataCell(s"double_field", 1234.0)),
-        repeatedData = Vector.empty
-      )
+    val sheetWriter = AppendOnlySheetWriter(
+      templateWorkbook.getSheet(sheetName),
+      outputWorkbook,
+      modelSchema,
+      mutable.Map.empty
+    )
+    sheetWriter.writeData(data)
     outputWorkbook.write(actualStream)
-
 
     val expectedInputStream = new ByteArrayInputStream(expectedStream.toByteArray)
     val actualInputStream = new ByteArrayInputStream(actualStream.toByteArray)
@@ -323,9 +336,9 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
   "SheetWriter" should "do substitution from keys in template workbook despite Blank values in model" in {
     val sheetName = "substitutionExtraKeys"
     val outputWorkbook = new SXSSFWorkbook(100)
-    val templateStream: ByteArrayOutputStream = new ByteArrayOutputStream()
-    val expectedStream: ByteArrayOutputStream = new ByteArrayOutputStream()
-    val actualStream: ByteArrayOutputStream = new ByteArrayOutputStream()
+    val templateStream = new ByteArrayOutputStream()
+    val expectedStream = new ByteArrayOutputStream()
+    val actualStream = new ByteArrayOutputStream()
 
     val model = StaticTemplateModel(Some("text"), None, Some(1234))
     val modelSchema = ExcelTestHelpers.getModelSchema(model)
@@ -359,13 +372,15 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     val expectedWorkbook: XSSFWorkbook = ExcelTestHelpers.generateTestWorkbook(sheetName, expectedRows)
     expectedWorkbook.write(expectedStream)
 
-    AppendOnlySheetWriter(templateWorkbook.getSheet(sheetName), outputWorkbook, modelSchema, mutable.Map.empty)
-      .writeData(
-        staticData = Vector(
-          DataCell(s"string_field", "text"),
-          DataCell(s"double_field", 1234.0)),
-        repeatedData = Vector.empty
-      )
+    val data = Iterator((
+      Vector(
+        DataCell(s"string_field", "text"),
+        DataCell(s"double_field", 1234.0)
+      ),
+      Vector.empty
+    ))
+    val sheetWriter = AppendOnlySheetWriter(templateWorkbook.getSheet(sheetName), outputWorkbook, modelSchema, mutable.Map.empty)
+    sheetWriter.writeData(data)
     outputWorkbook.write(actualStream)
 
     val expectedInputStream = new ByteArrayInputStream(expectedStream.toByteArray)
@@ -417,17 +432,20 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     ExcelTestHelpers.generateTestWorkbook(templateName, expectedRows)
       .write(expectedStream)
 
-    AppendOnlySheetWriter(templateBook.getSheet(templateName), outputWorkbook, schema, mutable.Map.empty)
-      .writeData(
-        staticData = Vector.empty,
-        repeatedData = Vector(
-          DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
-          DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
-          DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
-          DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
-          DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
-        )
+    val data = Iterator((
+      Vector.empty,
+      Vector(
+        DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+        DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+        DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+        DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+        DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
       )
+    ))
+
+    val sheetWriter = AppendOnlySheetWriter(templateBook.getSheet(templateName), outputWorkbook, schema, mutable.Map.empty)
+    sheetWriter.writeData(data)
+
     outputWorkbook.write(actualStream)
 
     val expectedInputStream = new ByteArrayInputStream(expectedStream.toByteArray)
@@ -486,20 +504,102 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     ExcelTestHelpers.generateTestWorkbook(templateName, expectedRows)
       .write(expectedStream)
 
-    AppendOnlySheetWriter(templateBook.getSheet(templateName), outputWorkbook, schema, mutable.Map.empty)
-      .writeData(
-        staticData = Vector(
-          DataCell("string_field", "Test Word"),
-          DataCell("long_field", 5432),
-        ),
-        repeatedData = Vector(
-          DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
-          DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
-          DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
-          DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
-          DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
-        )
+    val data = Iterator((
+      Vector(
+        DataCell("string_field", "Test Word"),
+        DataCell("long_field", 5432),
+      ),
+      Vector(
+        DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+        DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+        DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+        DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+        DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
       )
+    ))
+    val sheetWriter = AppendOnlySheetWriter(templateBook.getSheet(templateName), outputWorkbook, schema, mutable.Map.empty)
+    sheetWriter.writeData(data)
+    outputWorkbook.write(actualStream)
+
+    val expectedInputStream = new ByteArrayInputStream(expectedStream.toByteArray)
+    val actualInputStream = new ByteArrayInputStream(actualStream.toByteArray)
+
+    ExcelTestHelpers.assertEqualsWorkbooks(expectedInputStream, actualInputStream)
+  }
+
+  "SheetWriter" should "copy data in chunks" in {
+    val templateName = "copyRepeatedThenStatic"
+    val outputWorkbook = new SXSSFWorkbook(100)
+    val templateStream = new ByteArrayOutputStream()
+    val expectedStream = new ByteArrayOutputStream()
+    val actualStream = new ByteArrayOutputStream()
+
+    val repeatedModels = Seq(
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+    )
+
+    val lowerStaticModels = Seq(
+      StaticTemplateModel(Some("Test Word"), Some(5432), None)
+    )
+    val repeatedModelsSeq = repeatedModels.map(getModelSeq)
+    val lowerStaticModelsSeq = lowerStaticModels.map(getModelSeq)
+
+    val schema = Map(
+      "$REP.string_field" -> YamlEntry(KeyType.repeated, YamlCellType.string, YamlCellType.string),
+      "$REP.long_field" -> YamlEntry(KeyType.repeated, YamlCellType.long, YamlCellType.double),
+      "$REP.double_field" -> YamlEntry(KeyType.repeated, YamlCellType.double, YamlCellType.double),
+      "$KEY.string_field" -> YamlEntry(KeyType.single, YamlCellType.string, YamlCellType.string),
+      "$KEY.long_field" -> YamlEntry(KeyType.single, YamlCellType.long, YamlCellType.double),
+    )
+
+    val templateRows: Seq[Iterable[(String, CellValue)]] = Seq(
+      // Row with static text, empty cell, and number
+      Seq(
+        (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("static text")),
+        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1235)),
+      ),
+      repeatedModelsSeq.head,
+      lowerStaticModelsSeq.head
+    )
+
+    val expectedRows = Seq(
+      Seq(
+        (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("static text")),
+        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1235))
+      ),
+    ) ++ repeatedModelsSeq ++ lowerStaticModelsSeq
+
+    val templateBook = ExcelTestHelpers.generateTestWorkbook(templateName, templateRows, insertRowModelKeys = true)
+    templateBook.write(templateStream)
+    ExcelTestHelpers.generateTestWorkbook(templateName, expectedRows)
+      .write(expectedStream)
+
+    val data = Iterator((
+      Vector.empty,
+      Vector(
+        DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+        DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build()
+      )), (
+      Vector.empty,
+      Vector(
+        DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+        DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+        DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+      )), (
+      Vector(
+        DataCell("string_field", "Test Word"),
+        DataCell("long_field", 5432),
+      ),
+      Vector.empty
+    ))
+
+
+    val sheetWriter = AppendOnlySheetWriter(templateBook.getSheet(templateName), outputWorkbook, schema, mutable.Map.empty)
+    sheetWriter.writeData(data)
     outputWorkbook.write(actualStream)
 
     val expectedInputStream = new ByteArrayInputStream(expectedStream.toByteArray)
