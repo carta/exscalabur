@@ -78,42 +78,18 @@ class AppendOnlySheetWriter
   }
 
   private def writeDataToRows(staticData: ModelMap, repeatedData: Seq[ModelMap]): Int = {
-    def getRepeatedDataForRow(templateRow: Row) = {
-      repeatedData.zipWithIndex
-        .filterNot { case (modelMap, _) => shouldSkipRow(templateRow, modelMap, staticData) }
-        .map { case (modelMap, rowIndex) => (modelMap, rowIndex == repeatedData.size - 1) }
-    }
-
-    def shouldSkipNextRow(currRowIndex: Int) = {
-      templateSheet.rowOpt(currRowIndex + 1).forall(row => shouldSkipRow(row, staticData))
-    }
-
     templateSheet.getRowIndices
-      .drop(templateIndex)
+      .drop(templateIndex) // Append-Only Sheet Writer does not support writing data to previously written template rows
       .foldLeft(outputRowIndex) { (writeRowIndex, templateRowIndex) =>
         templateSheet.rowOpt(templateRowIndex)
           .map { templateRow =>
-            if (isRepeatedRow(templateRow)) {
-              getRepeatedDataForRow(templateRow)
-                .foldLeft(writeRowIndex) { case (currWriteIndex, (modelMap, isLastDataMap)) =>
-                  createRow(templateRow, modelMap, currWriteIndex)
-                  templateIndex = templateRowIndex
-
-                  if (isLastDataMap && shouldSkipNextRow(templateRowIndex)) {
-                    return currWriteIndex + 1
-                  }
-                  else {
-                    currWriteIndex + 1
-                  }
-                }
-            }
-            else if (shouldSkipRow(templateRow, staticData)) {
-              writeRowIndex
+            val writeResult: RowWriteResult = writeDataToRow(templateRow, writeRowIndex, repeatedData, staticData)
+            val nextWriteIndex = writeResult.writeIndex
+            if (writeResult.shouldStopCurrentWrite) {
+              return nextWriteIndex
             }
             else {
-              createRow(templateRow, staticData, writeRowIndex)
-              templateIndex = templateRowIndex
-              writeRowIndex + 1
+              nextWriteIndex
             }
           }
           .getOrElse {
@@ -124,6 +100,41 @@ class AppendOnlySheetWriter
       }
   }
 
+  case class RowWriteResult(writeIndex: Int, shouldStopCurrentWrite: Boolean)
+
+  private def writeDataToRow(templateRow: Row, writeRowIndex: Int, repeatedData: Seq[ModelMap], staticData: ModelMap): RowWriteResult = {
+    if (isRepeatedRow(templateRow)) {
+      writeRepeatedDataToRow(templateRow, writeRowIndex, repeatedData, staticData)
+    }
+    else if (shouldSkipRow(templateRow, staticData)) {
+      RowWriteResult(writeRowIndex, shouldStopCurrentWrite = false)
+    }
+    else {
+      createRow(templateRow, staticData, writeRowIndex)
+      templateIndex = templateRow.getRowNum
+      RowWriteResult(writeRowIndex + 1, shouldStopCurrentWrite = false)
+    }
+  }
+
+  private def writeRepeatedDataToRow(templateRow: Row, writeRowIndex: Int, repeatedData: Seq[ModelMap], staticData: ModelMap): RowWriteResult = {
+    val dataForRow = repeatedData.zipWithIndex
+      .filterNot { case (modelMap, _) => shouldSkipRow(templateRow, modelMap, staticData) }
+      .map { case (modelMap, rowIndex) => (modelMap, rowIndex == repeatedData.size - 1) }
+
+    val writeIndex = dataForRow.foldLeft(writeRowIndex) { case (currWriteIndex, (modelMap, isLastDataMap)) =>
+      createRow(templateRow, modelMap, currWriteIndex)
+      templateIndex = templateRow.getRowNum
+      lazy val shouldSkipNextRow = templateSheet.rowOpt(templateRow.getRowNum + 1).forall(row => shouldSkipRow(row, staticData))
+      if (isLastDataMap && shouldSkipNextRow) {
+        return RowWriteResult(currWriteIndex + 1, shouldStopCurrentWrite = true)
+      }
+      else {
+        currWriteIndex + 1
+      }
+    }
+    RowWriteResult(writeIndex, shouldStopCurrentWrite = false)
+  }
+
   private def initialWrite(): Unit = {
     copyPictures()
     templateSheet.rowIterator().asScala
@@ -132,7 +143,6 @@ class AppendOnlySheetWriter
         createRow(templateRow, Map.empty, outputRowIndex)
         outputRowIndex += 1
         templateIndex += 1
-        return
       }
   }
 

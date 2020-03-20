@@ -19,18 +19,23 @@ object Main extends App {
       100
     )
 
-    val repeatedData: List[DataRow] =
-      DataRow.Builder().addCell("animal", "monkey").build() ::
-        DataRow.Builder().addCell("animal", "horse").build() ::
-        DataRow.Builder().addCell("animal", "cow").build() ::
-        Nil
+    val repeatedData: List[DataRow] = List(
+      DataRow.Builder().addCell("animal", "monkey").build(),
+        DataRow.Builder().addCell("animal", "horse").build(),
+        DataRow.Builder().addCell("animal", "cow").build(),
+    )
 
-    val repeatedData2 = DataRow.Builder().addCell("animal", "dog").build() ::
-      DataRow.Builder().addCell("animal", "cat").build() :: Nil
+    val repeatedData2 = List(
+      DataRow.Builder().addCell("animal", "dog").build(),
+      DataRow.Builder().addCell("animal", "cat").build(),
+    )
 
-    val repeatedData3 = DataRow.Builder().addCell("element", "hydrogen").build() ::
-      DataRow.Builder().addCell("element", "helium").build() ::
-      DataRow.Builder().addCell("element", "lithium").build() :: Nil
+    val repeatedData3 = List(
+      DataRow.Builder().addCell("element", "hydrogen").build(),
+      DataRow.Builder().addCell("element", "helium").build(),
+      DataRow.Builder().addCell("element", "lithium").build()
+    )
+
 
     val sheetWriter = sword.getAppendOnlySheetWriter("Sheet1")
 
@@ -38,13 +43,13 @@ object Main extends App {
       (List.empty, repeatedData),
       (List.empty, repeatedData2),
       (List.empty, repeatedData2),
-      (DataCell("name", "katie") :: Nil, Nil),
+      (List(DataCell("name", "katie")), List.empty),
       (List.empty, repeatedData3)
     )
 
 
     sheetWriter.writeData(dataProvider)
 
-    sword.writeOut()
+    sword.writeToDisk()
   }
 }

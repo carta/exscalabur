@@ -40,7 +40,7 @@ class ExscalaburSpec extends AnyFlatSpec with Matchers {
     )
 
     exscalabur.getAppendOnlySheetWriter("Sheet1").writeData(Iterator((staticData, repeatedData)))
-    exscalabur.writeOut()
+    exscalabur.writeToDisk()
 
     val expectedWorkbookStream = getClass.getResourceAsStream("/excel/expected/writerSpec.xlsx")
     val actualWorkbookStream = new FileInputStream(filePath)
@@ -83,7 +83,7 @@ class ExscalaburSpec extends AnyFlatSpec with Matchers {
 
     exscalabur.getAppendOnlySheetWriter("Sheet1")
       .writeData(Iterator((staticData, repeatedData)))
-    exscalabur.writeOut()
+    exscalabur.writeToDisk()
 
     val expectedWorkbookStream = getClass.getResourceAsStream("/excel/expected/writerSpec.xlsx")
     fileStream.close()
@@ -93,7 +93,6 @@ class ExscalaburSpec extends AnyFlatSpec with Matchers {
 
   "Exscalabur" should "keep blank rows when copying sequential repeated rows" in {
     val filePath = File.createTempFile("sepRepRows", ".xlsx").getAbsolutePath
-    println(filePath)
     val animals = List("bear", "eagle", "elephant", "bird", "snake", "pig", "dog", "cat", "penguin", "anteater");
     val weight = List(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
 
@@ -116,7 +115,7 @@ class ExscalaburSpec extends AnyFlatSpec with Matchers {
 
     exscalabur.getAppendOnlySheetWriter("Sheet1")
       .writeData(Iterator((Vector.empty, repeatedData)))
-    exscalabur.writeOut()
+    exscalabur.writeToDisk()
 
     val expectedWorkbookStream = getClass.getResourceAsStream("/excel/expected/seqRepRows.xlsx")
     val actualWorkbookStream = new FileInputStream(filePath)
@@ -125,7 +124,6 @@ class ExscalaburSpec extends AnyFlatSpec with Matchers {
 
   "Exscalabur" should "write data in parts" in {
     val filePath = File.createTempFile("sepRepRows", ".xlsx").getAbsolutePath
-    println(filePath)
     val animals = List("bear", "eagle", "elephant", "bird", "snake", "pig", "dog", "cat", "penguin", "anteater");
     val weight = List(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
 
@@ -157,7 +155,7 @@ class ExscalaburSpec extends AnyFlatSpec with Matchers {
     )
 
     sheetWriter.writeData(data)
-    exscalabur.writeOut()
+    exscalabur.writeToDisk()
 
     val expectedWorkbookStream = getClass.getResourceAsStream("/excel/expected/seqRepRows.xlsx")
     val actualWorkbookStream = new FileInputStream(filePath)

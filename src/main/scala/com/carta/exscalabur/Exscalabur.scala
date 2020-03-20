@@ -13,17 +13,16 @@ import scala.collection.mutable
 //TODO verify no keys in yaml match
 class Exscalabur(sheetsByName: Map[String, XSSFSheet],
                  outputStream: OutputStream,
-                 schema: Map[String, YamlEntry],
-                 windowSize: Int) {
-  val outputWorkbook = new SXSSFWorkbook(windowSize)
-  private val cellStyleCache = mutable.Map.empty[CellStyle, Int]
+                 outputWorkbook: SXSSFWorkbook,
+                 cellStyleCache: mutable.Map[CellStyle, Int],
+                 schema: Map[String, YamlEntry]) {
 
   def getAppendOnlySheetWriter(sheetName: String): AppendOnlySheetWriter = {
     val sheet = sheetsByName(sheetName)
     AppendOnlySheetWriter(sheet, outputWorkbook, schema, cellStyleCache)
   }
 
-  def writeOut(): Unit = {
+  def writeToDisk(): Unit = {
     outputWorkbook.write(outputStream)
     outputWorkbook.dispose()
     outputWorkbook.close()
@@ -42,6 +41,9 @@ object Exscalabur {
     }.toMap
     val outputStream = new FileOutputStream(outputPath)
 
-    new Exscalabur(sheetsByName, outputStream, schema, windowSize)
+    val outputWorkbook = new SXSSFWorkbook(windowSize)
+    val cellStyleCache = mutable.Map.empty[CellStyle, Int]
+
+    new Exscalabur(sheetsByName, outputStream, outputWorkbook, cellStyleCache, schema)
   }
 }
