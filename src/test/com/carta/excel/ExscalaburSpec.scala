@@ -2,21 +2,21 @@ package com.carta.excel
 
 import java.io.{File, FileInputStream, FileOutputStream}
 
-import com.carta.exscalabur.DataRow
-import com.carta.yaml.{YamlCellType, KeyType, YamlEntry}
+import com.carta.exscalabur.{DataRow, Exscalabur}
+import com.carta.yaml.{KeyType, YamlCellType, YamlEntry}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class WriterSpec extends AnyFlatSpec with Matchers {
+class ExscalaburSpec extends AnyFlatSpec with Matchers {
 
-  "Writer" should "write excel file to disk" in {
-
-    val filePath = File.createTempFile("writerSpec", ".xlsx").getAbsolutePath
-
+  "Exscalabur" should "write excel file to disk" in {
+    val filePath = File.createTempFile("ExscalaburSpec", ".xlsx").getAbsolutePath
     val staticData = DataRow.Builder()
       .addCell("col1", "col1Value")
       .addCell("col2", 1.45)
       .build()
+      .getCells
+
     val repeatedData = List(
       DataRow.Builder()
         .addCell("col1", "repeatedString1")
@@ -35,22 +35,19 @@ class WriterSpec extends AnyFlatSpec with Matchers {
       "$REP.col2" -> YamlEntry(KeyType.repeated, YamlCellType.double, YamlCellType.double),
     )
 
-    val sheetData = SheetData(
-      sheetName = "Sheet1",
-      templatePath = getClass.getResource("/excel/templates/writerSpec.xlsx").getFile,
-      staticData = staticData.getCells,
-      repeatedData = repeatedData,
-      schema
+    val exscalabur = Exscalabur(
+      List(getClass.getResource("/excel/templates/writerSpec.xlsx").getFile), filePath, schema, 100
     )
 
-    new Writer(100).writeExcelFileToDisk(filePath, List(sheetData))
+    exscalabur.getAppendOnlySheetWriter("Sheet1").writeData(Iterator((staticData, repeatedData)))
+    exscalabur.writeToDisk()
 
     val expectedWorkbookStream = getClass.getResourceAsStream("/excel/expected/writerSpec.xlsx")
     val actualWorkbookStream = new FileInputStream(filePath)
     ExcelTestHelpers.assertEqualsWorkbooks(expectedWorkbookStream, actualWorkbookStream)
   }
 
-  "Writer" should "write excel file to stream" in {
+  "Exscalabur" should "write excel file to stream" in {
 
     val filePath = File.createTempFile("writerSpec", ".xlsx").getAbsolutePath
     val fileStream = new FileOutputStream(filePath)
@@ -59,6 +56,7 @@ class WriterSpec extends AnyFlatSpec with Matchers {
       .addCell("col1", "col1Value")
       .addCell("col2", 1.45)
       .build()
+      .getCells
     val repeatedData = List(
       DataRow.Builder()
         .addCell("col1", "repeatedString1")
@@ -77,15 +75,15 @@ class WriterSpec extends AnyFlatSpec with Matchers {
       "$REP.col2" -> YamlEntry(KeyType.repeated, YamlCellType.double, YamlCellType.double),
     )
 
-    val sheetData = SheetData(
-      sheetName = "Sheet1",
-      templatePath = getClass.getResource("/excel/templates/writerSpec.xlsx").getFile,
-      staticData = staticData.getCells,
-      repeatedData = repeatedData,
-      schema = schema
+    val templatePath = getClass.getResource("/excel/templates/writerSpec.xlsx").getFile
+
+    val exscalabur = Exscalabur(
+      List(templatePath), filePath, schema, 100
     )
 
-    new Writer(100).writeExcelToStream(List(sheetData), fileStream)
+    exscalabur.getAppendOnlySheetWriter("Sheet1")
+      .writeData(Iterator((staticData, repeatedData)))
+    exscalabur.writeToDisk()
 
     val expectedWorkbookStream = getClass.getResourceAsStream("/excel/expected/writerSpec.xlsx")
     fileStream.close()
@@ -93,16 +91,14 @@ class WriterSpec extends AnyFlatSpec with Matchers {
     ExcelTestHelpers.assertEqualsWorkbooks(expectedWorkbookStream, actualWorkbookStream)
   }
 
-  "Writer" should "keep blank rows when copying sequential repeated rows" in {
+  "Exscalabur" should "keep blank rows when copying sequential repeated rows" in {
     val filePath = File.createTempFile("sepRepRows", ".xlsx").getAbsolutePath
-
-
     val animals = List("bear", "eagle", "elephant", "bird", "snake", "pig", "dog", "cat", "penguin", "anteater");
     val weight = List(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
 
     val repeatedData = (0 until 10).map(i => {
       DataRow.Builder().addCell("animal", animals(i)).build()
-    })  ++ (0 until 10).map { i =>
+    }) ++ (0 until 10).map { i =>
       DataRow.Builder().addCell("weight", weight(i)).build()
     }
 
@@ -111,15 +107,55 @@ class WriterSpec extends AnyFlatSpec with Matchers {
       "$REP.weight" -> YamlEntry(KeyType.repeated, YamlCellType.long, YamlCellType.double),
     )
 
-    val sheetData = SheetData(
-      sheetName = "Sheet1",
-      templatePath = getClass.getResource("/excel/templates/seqRepRows.xlsx").getFile,
-      staticData = Vector.empty,
-      repeatedData = repeatedData.toList,
-      schema
+    val templatePath = getClass.getResource("/excel/templates/seqRepRows.xlsx").getFile
+
+    val exscalabur = Exscalabur(
+      List(templatePath), filePath, schema, 100
     )
 
-    new Writer(100).writeExcelFileToDisk(filePath, List(sheetData))
+    exscalabur.getAppendOnlySheetWriter("Sheet1")
+      .writeData(Iterator((Vector.empty, repeatedData)))
+    exscalabur.writeToDisk()
+
+    val expectedWorkbookStream = getClass.getResourceAsStream("/excel/expected/seqRepRows.xlsx")
+    val actualWorkbookStream = new FileInputStream(filePath)
+    ExcelTestHelpers.assertEqualsWorkbooks(expectedWorkbookStream, actualWorkbookStream)
+  }
+
+  "Exscalabur" should "write data in parts" in {
+    val filePath = File.createTempFile("sepRepRows", ".xlsx").getAbsolutePath
+    val animals = List("bear", "eagle", "elephant", "bird", "snake", "pig", "dog", "cat", "penguin", "anteater");
+    val weight = List(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+
+    val repeatedData1 = animals.take(5)
+      .map(animal => DataRow.Builder().addCell("animal", animal).build())
+
+    val repeatedData2 = animals.slice(5, 10)
+      .map(animal => DataRow.Builder().addCell("animal", animal).build())
+
+    val repeatedData3 = weight.map(weight => DataRow.Builder().addCell("weight", weight).build())
+
+    val schema = Map(
+      "$REP.animal" -> YamlEntry(KeyType.repeated, YamlCellType.string, YamlCellType.string),
+      "$REP.weight" -> YamlEntry(KeyType.repeated, YamlCellType.long, YamlCellType.double),
+    )
+
+    val templatePath = getClass.getResource("/excel/templates/seqRepRows.xlsx").getFile
+
+    val exscalabur = Exscalabur(
+      List(templatePath), filePath, schema, 100
+    )
+
+    val sheetWriter = exscalabur.getAppendOnlySheetWriter("Sheet1")
+
+    val data = Iterator(
+      (Vector.empty, repeatedData1),
+      (Vector.empty, repeatedData2),
+      (Vector.empty, repeatedData3),
+    )
+
+    sheetWriter.writeData(data)
+    exscalabur.writeToDisk()
 
     val expectedWorkbookStream = getClass.getResourceAsStream("/excel/expected/seqRepRows.xlsx")
     val actualWorkbookStream = new FileInputStream(filePath)

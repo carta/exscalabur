@@ -1,44 +1,49 @@
 package com.carta.exscalabur
 
-import java.io.File
+import java.io.{FileOutputStream, OutputStream}
 
-import com.carta.excel.{SheetData, TabType, Writer}
-import com.carta.yaml.{YamlEntry, YamlReader}
+import com.carta.excel.AppendOnlySheetWriter
+import com.carta.yaml.YamlEntry
+import org.apache.poi.ss.usermodel.CellStyle
+import org.apache.poi.xssf.streaming.SXSSFWorkbook
+import org.apache.poi.xssf.usermodel.{XSSFSheet, XSSFWorkbook}
 
 import scala.collection.mutable
 
 //TODO verify no keys in yaml match
-class Exscalabur(outputPath: String, yamlPath: String) {
-  private val tabToRows = mutable.Map.empty[String, List[DataRow]]
-  private val tabToTemplatePath = mutable.Map.empty[String, String]
-  private val templateToStuff = mutable.Map.empty[String, (String, Iterable[DataCell], List[DataRow])]
+class Exscalabur(sheetsByName: Map[String, XSSFSheet],
+                 outputStream: OutputStream,
+                 outputWorkbook: SXSSFWorkbook,
+                 cellStyleCache: mutable.Map[CellStyle, Int],
+                 schema: Map[String, YamlEntry]) {
 
-  private val yamlReader = YamlReader()
-  private lazy val yamlData = yamlReader.parse(new File(yamlPath))
-
-  val windowSize = 100
-
-  val writer = new Writer(windowSize)
-
-  // TODO: I think this is actually add template
-  def addTab(tabName: String, templatePath: String, staticData: Iterable[DataCell], repeatedData: List[DataRow]): Exscalabur = {
-    tabToRows.put(tabName, repeatedData)
-    tabToTemplatePath.put(tabName, templatePath)
-    templateToStuff.put(tabName, (templatePath, staticData, repeatedData))
-    this
+  def getAppendOnlySheetWriter(sheetName: String): AppendOnlySheetWriter = {
+    val sheet = sheetsByName(sheetName)
+    AppendOnlySheetWriter(sheet, outputWorkbook, schema, cellStyleCache)
   }
 
-  def writeExcelToDisk(): Unit = {
-    writer.writeExcelFileToDisk(outputPath, getTabParams(TabType.repeated, yamlData))
+  def writeToDisk(): Unit = {
+    outputWorkbook.write(outputStream)
+    outputWorkbook.dispose()
+    outputWorkbook.close()
+    outputStream.close()
   }
+}
 
-  private def getTabParams(tabType: TabType.Value, yamlData: Map[String, YamlEntry]) = {
-    val toTabParam = ((tabName: String, data: Iterable[DataCell], repeatedData: List[DataRow], templatePath: String) => {
-      SheetData(tabName, templatePath, data, repeatedData, yamlData)
-    }).tupled
+object Exscalabur {
+  def apply(templatePaths: Iterable[String],
+            outputPath: String,
+            schema: Map[String, YamlEntry],
+            windowSize: Int): Exscalabur = {
+    val sheetsByName = templatePaths.map { str =>
+      val sheet = new XSSFWorkbook(str).getSheetAt(0)
+      sheet.getSheetName -> sheet
+    }.toMap
+    val outputStream = new FileOutputStream(outputPath)
 
-    templateToStuff.map { z =>
-      toTabParam(z._1, z._2._2, z._2._3, z._2._1)
-    }
+    val outputWorkbook = new SXSSFWorkbook(windowSize)
+    val cellStyleCache = mutable.Map.empty[CellStyle, Int]
+
+    new Exscalabur(sheetsByName, outputStream, outputWorkbook, cellStyleCache, schema)
   }
 }

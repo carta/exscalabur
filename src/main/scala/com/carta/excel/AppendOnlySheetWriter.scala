@@ -77,51 +77,73 @@ class AppendOnlySheetWriter
     }.toMap
   }
 
-  private def writeDataToRows(staticDataModelMap: ModelMap, repeatedDataModelMaps: Seq[ModelMap]): Int = {
-    val insertRowsWithData = insertRows(staticDataModelMap, repeatedDataModelMaps) _
-    templateSheet.getRowIndices.drop(templateIndex).foldLeft(outputRowIndex)(insertRowsWithData)
-  }
-
-  private def insertRows(staticData: ModelMap, repeatedData: Iterable[ModelMap])
-                        (writeRowIndex: Int, templateRowIndex: Int): Int = {
-    Option(templateSheet.getRow(templateRowIndex)).map { templateRow =>
-      if (isRepeatedRow(templateRow)) {
-        repeatedData.filterNot(modelMap => shouldSkipRow(templateRow, modelMap, staticData))
-          .foldLeft(writeRowIndex) { (currWriteIndex, modelMap) =>
-            createRow(templateRow, modelMap, currWriteIndex)
-            templateIndex = templateRowIndex
-            currWriteIndex + 1
+  private def writeDataToRows(staticData: ModelMap, repeatedData: Seq[ModelMap]): Int = {
+    templateSheet.getRowIndices
+      .drop(templateIndex) // Append-Only Sheet Writer does not support writing data to previously written template rows
+      .foldLeft(outputRowIndex) { (writeRowIndex, templateRowIndex) =>
+        templateSheet.rowOpt(templateRowIndex)
+          .map { templateRow =>
+            val writeResult: RowWriteResult = writeDataToRow(templateRow, writeRowIndex, repeatedData, staticData)
+            val nextWriteIndex = writeResult.writeIndex
+            if (writeResult.shouldStopCurrentWrite) {
+              return nextWriteIndex
+            }
+            else {
+              nextWriteIndex
+            }
+          }
+          .getOrElse {
+            outputSheet.createRow(writeRowIndex)
+            templateIndex = templateRowIndex + 1
+            writeRowIndex + 1
           }
       }
-      else if (shouldSkipRow(templateRow, staticData)) {
-        writeRowIndex
+  }
+
+  case class RowWriteResult(writeIndex: Int, shouldStopCurrentWrite: Boolean)
+
+  private def writeDataToRow(templateRow: Row, writeRowIndex: Int, repeatedData: Seq[ModelMap], staticData: ModelMap): RowWriteResult = {
+    if (isRepeatedRow(templateRow)) {
+      writeRepeatedDataToRow(templateRow, writeRowIndex, repeatedData, staticData)
+    }
+    else if (shouldSkipRow(templateRow, staticData)) {
+      RowWriteResult(writeRowIndex, shouldStopCurrentWrite = false)
+    }
+    else {
+      createRow(templateRow, staticData, writeRowIndex)
+      templateIndex = templateRow.getRowNum
+      RowWriteResult(writeRowIndex + 1, shouldStopCurrentWrite = false)
+    }
+  }
+
+  private def writeRepeatedDataToRow(templateRow: Row, writeRowIndex: Int, repeatedData: Seq[ModelMap], staticData: ModelMap): RowWriteResult = {
+    val dataForRow = repeatedData.zipWithIndex
+      .filterNot { case (modelMap, _) => shouldSkipRow(templateRow, modelMap, staticData) }
+      .map { case (modelMap, rowIndex) => (modelMap, rowIndex == repeatedData.size - 1) }
+
+    val writeIndex = dataForRow.foldLeft(writeRowIndex) { case (currWriteIndex, (modelMap, isLastDataMap)) =>
+      createRow(templateRow, modelMap, currWriteIndex)
+      templateIndex = templateRow.getRowNum
+      lazy val shouldSkipNextRow = templateSheet.rowOpt(templateRow.getRowNum + 1).forall(row => shouldSkipRow(row, staticData))
+      if (isLastDataMap && shouldSkipNextRow) {
+        return RowWriteResult(currWriteIndex + 1, shouldStopCurrentWrite = true)
       }
       else {
-        createRow(templateRow, staticData, writeRowIndex)
-        templateIndex = templateRowIndex
-        writeRowIndex + 1
+        currWriteIndex + 1
       }
-    } getOrElse {
-      outputSheet.createRow(writeRowIndex)
-      templateIndex = templateRowIndex + 1
-      writeRowIndex + 1
     }
+    RowWriteResult(writeIndex, shouldStopCurrentWrite = false)
   }
 
   private def initialWrite(): Unit = {
     copyPictures()
-    templateSheet.getRowIndices
-      .drop(templateIndex)
-      .foreach { currTemplateIndex =>
-        Option(templateSheet.getRow(currTemplateIndex))
-          .filter(row => !isRepeatedRow(row) && !shouldSkipRow(row, Map.empty))
-          .foreach { templateRow =>
-            createRow(templateRow, Map.empty, outputRowIndex)
-            outputRowIndex += 1
-            templateIndex += 1
-          }
+    templateSheet.rowIterator().asScala
+      .find(row => !isRepeatedRow(row) && !shouldSkipRow(row, Map.empty))
+      .foreach { templateRow =>
+        createRow(templateRow, Map.empty, outputRowIndex)
+        outputRowIndex += 1
+        templateIndex += 1
       }
-
   }
 
   private def isRepeatedRow(row: Row): Boolean = row.cellIterator().asScala.exists(isRepeatedCell)
