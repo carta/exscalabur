@@ -523,7 +523,6 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
 
     val expectedInputStream = new ByteArrayInputStream(expectedStream.toByteArray)
     val actualInputStream = new ByteArrayInputStream(actualStream.toByteArray)
-    new FileOutputStream("./test.xlsx").write(actualStream.toByteArray)
     ExcelTestHelpers.assertEqualsWorkbooks(expectedInputStream, actualInputStream)
   }
 
