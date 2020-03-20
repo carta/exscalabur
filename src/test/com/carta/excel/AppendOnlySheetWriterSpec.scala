@@ -485,8 +485,8 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     val templateRows: Seq[Iterable[(String, CellValue)]] = Seq(
       // Row with static text, empty cell, and number
       Seq(
-        (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("text")),
-        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1234)),
+        (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("static_text")),
+        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1337)),
       ),
       repeatedModelsSeq.head,
       lowerStaticModelsSeq.head
@@ -494,8 +494,8 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
 
     val expectedRows = Seq(
       Seq(
-        (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("text")),
-        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1234))
+        (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("static_text")),
+        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1337))
       ),
     ) ++ repeatedModelsSeq ++ lowerStaticModelsSeq
 
@@ -523,7 +523,7 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
 
     val expectedInputStream = new ByteArrayInputStream(expectedStream.toByteArray)
     val actualInputStream = new ByteArrayInputStream(actualStream.toByteArray)
-
+    new FileOutputStream("./test.xlsx").write(actualStream.toByteArray)
     ExcelTestHelpers.assertEqualsWorkbooks(expectedInputStream, actualInputStream)
   }
 
