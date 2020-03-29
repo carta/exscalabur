@@ -39,16 +39,38 @@ commands:
           paths:
             - ~/.m2
           key: v1-dependencies--{{ checksum "build.sbt" }}
-
+  test:
+    description: Runs project tests
+    steps:
+      - run:
+          name: Run Tests
+          command: sbt test
+  version:
+    description: if commit warrants version bump, put correct version in version.sbt
+    steps:
+      - run:
+          name: Update Version
+          command: |
+            export version=$(git log -1 | grep '\[*\]' | cut -d ']' -f1 | cut -d '[' -f2)
+            echo $(git log -1)
+            sbt 'updateVersion $version'
   publish:
     description: Tag and release to cloudsmith
     parameters:
       cloudsmith-repo:
         type: string
     steps:
+      - add_ssh_keys:
+            fingerprints:
+              - "72:73:52:4d:76:de:58:66:af:29:26:80:57:03:90:87"
       - run:
           name: Publish to cloudsmith
-          command: sbt release
+          command: |
+            sbt package
+            sbt publish
+            git config --global user.name 'R&D CI'
+            git config --global user.email '<>'
+            git commit -am "[ci skip] published exscalabur $(cat version.sbt | cut -d ' ' -f5) to cloudsmith"
 
 jobs:
   tests:
