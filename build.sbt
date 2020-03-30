@@ -35,21 +35,6 @@ libraryDependencies ++= Seq(
   "com.jsuereth" % "scala-arm_2.12" % "2.0"
 )
 
-publishTo := {
-  val baseUrl = "https://maven.cloudsmith.io/carta/"
-  if (isSnapshot.value)
-    Some("Cloudsmith API Snapshots" at baseUrl + "maven-snapshots")
-  else
-    Some("Cloudsmith API Releases" at baseUrl + "maven-releases")
-}
-
-credentials += Credentials(
-  "Cloudsmith API",
-  "maven.cloudsmith.io",
-  "token",
-  sys.env.getOrElse("CLOUDSMITH_API_KEY", "")
-)
-
 lazy val updateVersion = inputKey[Unit]("Updates version.sbt")
 updateVersion := {
   import complete.DefaultParsers.spaceDelimited
