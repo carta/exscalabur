@@ -85,12 +85,16 @@ jobs:
     executor: scala-executor
     steps:
       - checkout
+      - compile
+      - version
       - publish:
           cloudsmith-repo: https://maven.cloudsmith.io/carta/maven-snapshots
   publish-release:
     executor: scala-executor
     steps:
       - checkout
+      - compile
+      - version
       - publish:
           cloudsmith-repo: https://maven.cloudsmith.io/carta/maven-releases
 
