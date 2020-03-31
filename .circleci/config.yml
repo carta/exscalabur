@@ -51,9 +51,9 @@ commands:
       - run:
           name: Update Version
           command: |
-            export version=$(git log -1 | grep '\[*\]' | cut -d ']' -f1 | cut -d '[' -f2)
+            export action=$(git log -1 | grep '\[*\]' | cut -d ']' -f1 | cut -d '[' -f2)
             echo $(git log -1)
-            sbt 'updateVersion $version'
+            sbt 'updateVersion $action'
   publish:
     description: Tag and release to cloudsmith
     parameters:
@@ -78,9 +78,7 @@ jobs:
     steps:
       - checkout
       - compile
-      - run:
-          name: Run tests
-          command: sbt test
+      - test
   publish-snapshot:
     executor: scala-executor
     steps:
