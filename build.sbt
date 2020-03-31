@@ -9,10 +9,14 @@ scalaVersion := "2.12.8"
 name := "Exscalabur"
 publishTo := {
   val baseUrl = "https://maven.cloudsmith.io/carta/";
-  if (isSnapshot.value)
+  val isSnapshot = sys.env.getOrElse("isSnapshot", "false").toBoolean
+  if (isSnapshot) {
+    publishConfiguration := publishConfiguration.value.withOverwrite(true)
     Some("Cloudsmith API Snapshots" at baseUrl + "maven-snapshots")
-  else
+  }
+  else {
     Some("Cloudsmith API Releases" at baseUrl + "maven-releases")
+  }
 }
 
 credentials += Credentials(
