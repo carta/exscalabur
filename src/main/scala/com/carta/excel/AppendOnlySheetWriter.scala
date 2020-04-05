@@ -22,7 +22,7 @@ class AppendOnlySheetWriter
   var outputRowIndex: Int = templateSheet.getFirstRowNum
   var templateIndex: Int = templateSheet.getFirstRowNum
   val outputSheet: Sheet = outputWorkbook.createSheet(templateSheet.getSheetName)
-
+  val test = mutable.Map.empty[Int, Boolean]
   def copyPictures(): Unit = {
     val templateImages = templateSheet.createDrawingPatriarch().getShapes.asScala
       .filter(_.isInstanceOf[XSSFPicture])
@@ -104,14 +104,17 @@ class AppendOnlySheetWriter
 
   private def writeDataToRow(templateRow: Row, writeRowIndex: Int, repeatedData: Seq[ModelMap], staticData: ModelMap): RowWriteResult = {
     if (isRepeatedRow(templateRow)) {
-      writeRepeatedDataToRow(templateRow, writeRowIndex, repeatedData, staticData)
+      val x = writeRepeatedDataToRow(templateRow, writeRowIndex, repeatedData, staticData)
+      println(x)
+      return x
     }
     else if (shouldSkipRow(templateRow, staticData)) {
-      RowWriteResult(writeRowIndex, shouldStopCurrentWrite = false)
+      println("SKIPPING ROW")
+      RowWriteResult(writeRowIndex, shouldStopCurrentWrite = true)
     }
     else {
       createRow(templateRow, staticData, writeRowIndex)
-      templateIndex = templateRow.getRowNum
+      templateIndex = templateRow.getRowNum + 1
       RowWriteResult(writeRowIndex + 1, shouldStopCurrentWrite = false)
     }
   }
@@ -120,10 +123,14 @@ class AppendOnlySheetWriter
     val dataForRow = repeatedData.zipWithIndex
       .filterNot { case (modelMap, _) => shouldSkipRow(templateRow, modelMap, staticData) }
       .map { case (modelMap, rowIndex) => (modelMap, rowIndex == repeatedData.size - 1) }
-
+    if (dataForRow.isEmpty) {
+      templateIndex = templateRow.getRowNum + (if (test.getOrElse(templateRow.getRowNum, false)) 1 else 0)
+      return RowWriteResult(writeRowIndex, shouldStopCurrentWrite = !test.getOrElse(templateRow.getRowNum, false))
+    }
     val writeIndex = dataForRow.foldLeft(writeRowIndex) { case (currWriteIndex, (modelMap, isLastDataMap)) =>
       createRow(templateRow, modelMap, currWriteIndex)
       templateIndex = templateRow.getRowNum
+      test.put(templateIndex, true)
       lazy val shouldSkipNextRow = templateSheet.rowOpt(templateRow.getRowNum + 1).forall(row => shouldSkipRow(row, staticData))
       if (isLastDataMap && shouldSkipNextRow) {
         return RowWriteResult(currWriteIndex + 1, shouldStopCurrentWrite = true)
@@ -132,7 +139,7 @@ class AppendOnlySheetWriter
         currWriteIndex + 1
       }
     }
-    RowWriteResult(writeIndex, shouldStopCurrentWrite = false)
+    RowWriteResult(writeIndex, shouldStopCurrentWrite = dataForRow.isEmpty)
   }
 
   private def initialWrite(): Unit = {

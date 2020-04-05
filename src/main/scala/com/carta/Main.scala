@@ -7,30 +7,33 @@ import com.carta.yaml.YamlReader
 
 object Main extends App {
   override def main(args: Array[String]): Unit = {
-    val templates: List[String] = "/home/katie/Documents/Exscalabur Demo/template.xlsx" :: Nil
+    val templates: List[String] = "/Users/katiedsouza/Desktop/demo.xlsx" :: Nil
 
     val yamlReader = YamlReader()
-    val yamlData = yamlReader.parse(new File("/home/katie/Documents/Exscalabur Demo/template.yml"))
+    val yamlData = yamlReader.parse(new File("/Users/katiedsouza/Desktop/demo.yaml"))
 
     val sword = Exscalabur(
       templates,
-      "/home/katie/Documents/Exscalabur Demo/out/exscalabur.xlsx",
+      "/Users/katiedsouza/Desktop/demo.out.xlsx",
       yamlData,
       100
     )
 
-    val repeatedData: List[DataRow] = List(
-      DataRow.Builder().addCell("animal", "monkey").build(),
-        DataRow.Builder().addCell("animal", "horse").build(),
-        DataRow.Builder().addCell("animal", "cow").build(),
+    val staticData1 = List(
+      DataCell("fname", "katie"),
+      DataCell("lname", "dsouza"),
+    )
+
+    val repeatedData1 = List(
+      DataRow.Builder().addCell("animal", "monkey").addCell("weight", 12.1).build(),
+      DataRow.Builder().addCell("animal", "horse").addCell("weight", 12.2).build()
+    )
+
+    val staticData2 = List(
+      DataCell("conclusion", "EXSCALABUR")
     )
 
     val repeatedData2 = List(
-      DataRow.Builder().addCell("animal", "dog").build(),
-      DataRow.Builder().addCell("animal", "cat").build(),
-    )
-
-    val repeatedData3 = List(
       DataRow.Builder().addCell("element", "hydrogen").build(),
       DataRow.Builder().addCell("element", "helium").build(),
       DataRow.Builder().addCell("element", "lithium").build()
@@ -40,11 +43,10 @@ object Main extends App {
     val sheetWriter = sword.getAppendOnlySheetWriter("Sheet1")
 
     val dataProvider: Iterator[(List[DataCell], List[DataRow])] = Iterator(
-      (List.empty, repeatedData),
-      (List.empty, repeatedData2),
-      (List.empty, repeatedData2),
-      (List(DataCell("name", "katie")), List.empty),
-      (List.empty, repeatedData3)
+      (staticData1, List.empty),
+      (List.empty, repeatedData1),
+      (staticData2, List.empty),
+      (List.empty, repeatedData2)
     )
 
 
