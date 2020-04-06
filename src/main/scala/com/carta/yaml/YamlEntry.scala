@@ -11,13 +11,13 @@ case class YamlEntry
 
 class EntryBuilder(
                     @JsonScalaEnumeration(classOf[KeyTypeReference])
-                        var keyType: KeyType.Value,
+                    var keyType: KeyType.Value,
 
                     @JsonScalaEnumeration(classOf[CellTypeReference])
-                        columnType: YamlCellType.Value,
+                    columnType: YamlCellType.Value,
 
                     @JsonScalaEnumeration(classOf[CellTypeReference])
-                        excelType: YamlCellType.Value) {
+                    excelType: YamlCellType.Value) {
   def build(): YamlEntry = {
     YamlEntry(keyType, columnType, excelType)
   }

@@ -154,7 +154,7 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
                                       outputRow: Row,
                                       templateSheet: Sheet,
                                       outputSheet: Sheet,
-                                      substitutionMap: ExportModelUtils.ModelMap
+                                      substitutionMap: ModelMap
                                      ): Unit = {
     copyRowHeight(templateRow, outputRow)
 
@@ -168,7 +168,7 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
       }
   }
 
-  private def substituteAndCopyCell(templateCell: Cell, outputCell: Cell, substitutionMap: ExportModelUtils.ModelMap): Unit = {
+  private def substituteAndCopyCell(templateCell: Cell, outputCell: Cell, substitutionMap: ModelMap): Unit = {
     templateCell.getCellType match {
       case CellType.NUMERIC =>
         outputCell.setCellValue(templateCell.getNumericCellValue)
@@ -182,7 +182,7 @@ class ExcelWorkbook(templateStreamMap: Map[String, resource.ManagedResource[Inpu
     }
   }
 
-  private def substituteString(stringValue: String, outputCell: Cell, substitutionMap: ExportModelUtils.ModelMap): Unit = {
+  private def substituteString(stringValue: String, outputCell: Cell, substitutionMap: ModelMap): Unit = {
     if (stringValue.startsWith(ExportModelUtils.SUBSTITUTION_KEY) || stringValue.startsWith(ExportModelUtils.REPEATED_FIELD_KEY)) {
       if (substitutionMap.contains(stringValue)) {
         substitutionMap(stringValue) match {

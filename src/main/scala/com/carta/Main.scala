@@ -20,35 +20,21 @@ object Main extends App {
     )
 
     val staticData1 = List(
-      DataCell("fname", "katie"),
-      DataCell("lname", "dsouza"),
+      DataCell("string_field", "katie"),
+      DataCell("long_field", 1234),
+      DataCell("double_field", 1235.1),
     )
-
-    val repeatedData1 = List(
-      DataRow.Builder().addCell("animal", "monkey").addCell("weight", 12.1).build(),
-      DataRow.Builder().addCell("animal", "horse").addCell("weight", 12.2).build()
-    )
-
     val staticData2 = List(
-      DataCell("conclusion", "EXSCALABUR")
+      DataCell("string_field2", "katie2"),
+      DataCell("long_field2", 21234),
+      DataCell("double_field2", 21235.1),
     )
-
-    val repeatedData2 = List(
-      DataRow.Builder().addCell("element", "hydrogen").build(),
-      DataRow.Builder().addCell("element", "helium").build(),
-      DataRow.Builder().addCell("element", "lithium").build()
-    )
-
-
     val sheetWriter = sword.getAppendOnlySheetWriter("Sheet1")
 
     val dataProvider: Iterator[(List[DataCell], List[DataRow])] = Iterator(
       (staticData1, List.empty),
-      (List.empty, repeatedData1),
       (staticData2, List.empty),
-      (List.empty, repeatedData2)
     )
-
 
     sheetWriter.writeData(dataProvider)
 

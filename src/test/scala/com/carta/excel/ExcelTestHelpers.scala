@@ -3,6 +3,7 @@ package com.carta.excel
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, File, InputStream}
 import java.util.Date
 
+import com.carta.excel.ExportModelUtils.ModelMap
 import com.carta.yaml.{KeyType, YamlCellType, YamlEntry}
 import org.apache.poi.ss.usermodel.{BorderStyle, CellStyle, CellType}
 import org.apache.poi.xssf.usermodel._
@@ -293,8 +294,8 @@ object ExcelTestHelpers extends Matchers {
                            expectedStream: ByteArrayOutputStream,
                            actualStream: ByteArrayOutputStream,
                            expectedCopyResult: Option[Int],
-                           staticRowData: ExportModelUtils.ModelMap = Map.empty,
-                           repeatedRowData: Seq[ExportModelUtils.ModelMap] = Seq.empty,
+                           staticRowData: ModelMap = Map.empty,
+                           repeatedRowData: Seq[ModelMap] = Seq.empty,
                            batchSize: Int = 1000,
                           ): Unit = {
     val templateBytes = managed(new ByteArrayInputStream(templateStream.toByteArray))

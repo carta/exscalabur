@@ -607,6 +607,303 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     ExcelTestHelpers.assertEqualsWorkbooks(expectedInputStream, actualInputStream)
   }
 
+  "SheetWriter" should "load template with static text between repeated rows" in {
+    val templateName = "staticText"
+    val outputWorkbook = new SXSSFWorkbook(100)
+    val templateStream = new ByteArrayOutputStream()
+    val expectedStream = new ByteArrayOutputStream()
+    val actualStream = new ByteArrayOutputStream()
+
+    val schema = Map(
+      "$REP.string_field" -> YamlEntry(KeyType.repeated, YamlCellType.string, YamlCellType.string),
+      "$REP.long_field" -> YamlEntry(KeyType.repeated, YamlCellType.long, YamlCellType.double),
+      "$REP.double_field" -> YamlEntry(KeyType.repeated, YamlCellType.double, YamlCellType.double),
+
+      "$REP.string_field2" -> YamlEntry(KeyType.repeated, YamlCellType.string, YamlCellType.string),
+      "$REP.long_field2" -> YamlEntry(KeyType.repeated, YamlCellType.long, YamlCellType.double),
+      "$REP.double_field2" -> YamlEntry(KeyType.repeated, YamlCellType.double, YamlCellType.double),
+    )
+
+    val repeatedModels = List(
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+    )
+    val repeatedModelsSeq1 = repeatedModels.map(getModelSeq)
+    val repeatedModelsSeq2 = repeatedModels.map(getModelSeq).map(_.map { case (key, cellValue) => (f"${key}2", cellValue) })
+
+    val templateRows: Seq[Iterable[(String, CellValue)]] = Seq(
+      // Row with static text, empty cell, and number
+      repeatedModelsSeq1.head,
+      Seq(
+        (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("static_text")),
+        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1337)),
+      ),
+      repeatedModelsSeq2.head
+    )
+
+    val expectedRows = repeatedModelsSeq1 ++ Seq(
+      Seq(
+        (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("static_text")),
+        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1337))
+      )
+    ) ++ repeatedModelsSeq2
+
+    val templateBook = ExcelTestHelpers.generateTestWorkbook(templateName, templateRows, insertRowModelKeys = true)
+    templateBook.write(templateStream)
+    ExcelTestHelpers.generateTestWorkbook(templateName, expectedRows)
+      .write(expectedStream)
+
+    val data1 = Vector(
+      DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+      DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+      DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+      DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+      DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+    )
+
+    val data2 = Vector(
+      DataRow.Builder().addCell("string_field2", "text").addCell("long_field2", 1234).addCell("double_field2", 1234.0).build(),
+      DataRow.Builder().addCell("string_field2", "text").addCell("long_field2", 1234).addCell("double_field2", 1234.0).build(),
+      DataRow.Builder().addCell("string_field2", "text").addCell("long_field2", 1234).addCell("double_field2", 1234.0).build(),
+      DataRow.Builder().addCell("string_field2", "text").addCell("long_field2", 1234).addCell("double_field2", 1234.0).build(),
+      DataRow.Builder().addCell("string_field2", "text").addCell("long_field2", 1234).addCell("double_field2", 1234.0).build(),
+    )
+
+    val data = Iterator((Vector.empty, data1), (Vector.empty, data2))
+    val sheetWriter = AppendOnlySheetWriter(templateBook.getSheet(templateName), outputWorkbook, schema, mutable.Map.empty)
+    sheetWriter.writeData(data)
+    outputWorkbook.write(actualStream)
+
+    val expectedInputStream = new ByteArrayInputStream(expectedStream.toByteArray)
+    val actualInputStream = new ByteArrayInputStream(actualStream.toByteArray)
+    ExcelTestHelpers.assertEqualsWorkbooks(expectedInputStream, actualInputStream)
+  }
+
+  "SheetWriter" should "load template with static text between substitution rows" in {
+    val templateName = "staticText"
+    val outputWorkbook = new SXSSFWorkbook(100)
+    val templateStream = new ByteArrayOutputStream()
+    val expectedStream = new ByteArrayOutputStream()
+    val actualStream = new ByteArrayOutputStream()
+
+    val schema = Map(
+      "$KEY.string_field" -> YamlEntry(KeyType.single, YamlCellType.string, YamlCellType.string),
+      "$KEY.long_field" -> YamlEntry(KeyType.single, YamlCellType.long, YamlCellType.double),
+      "$KEY.double_field" -> YamlEntry(KeyType.single, YamlCellType.double, YamlCellType.double),
+
+      "$KEY.string_field2" -> YamlEntry(KeyType.single, YamlCellType.string, YamlCellType.string),
+      "$KEY.long_field2" -> YamlEntry(KeyType.single, YamlCellType.long, YamlCellType.double),
+      "$KEY.double_field2" -> YamlEntry(KeyType.single, YamlCellType.double, YamlCellType.double),
+    )
+
+    val staticModel = StaticTemplateModel(Some("text"), Some(1233), Some(1234))
+
+    val staticModel2 = StaticTemplateModel(Some("text2"), Some(1235), Some(1236))
+
+    val modelSeq1 = getModelSeq(staticModel)
+    val modelSeq2 = getModelSeq(staticModel2).map { case (key, cellValue) => (f"${key}2", cellValue) }
+
+    val templateRows = Seq(
+      modelSeq1,
+      Seq(
+        (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("static_text")),
+        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1337)),
+      ),
+      modelSeq2
+    )
+
+    val expectedRows: Seq[Iterable[(String, CellValue)]] = Seq(
+      modelSeq1,
+      Seq(
+        (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("static_text")),
+        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1337))
+      ),
+      modelSeq2
+    )
+
+    val templateBook = ExcelTestHelpers.generateTestWorkbook(templateName, templateRows, insertRowModelKeys = true)
+    templateBook.write(templateStream)
+    ExcelTestHelpers.generateTestWorkbook(templateName, expectedRows)
+      .write(expectedStream)
+
+    val data1 = Vector(
+      DataCell("string_field", "text"),
+      DataCell("long_field", 1233),
+      DataCell("double_field", 1234.0)
+    )
+    val data2 = Vector(
+      DataCell("string_field2", "text2"),
+      DataCell("long_field2", 1235),
+      DataCell("double_field2", 1236.0)
+    )
+
+    val data = Iterator((data1, Vector.empty), (data2, Vector.empty))
+    val sheetWriter = AppendOnlySheetWriter(templateBook.getSheet(templateName), outputWorkbook, schema, mutable.Map.empty)
+    sheetWriter.writeData(data)
+    outputWorkbook.write(actualStream)
+
+    val expectedInputStream = new ByteArrayInputStream(expectedStream.toByteArray)
+    val actualInputStream = new ByteArrayInputStream(actualStream.toByteArray)
+    ExcelTestHelpers.assertEqualsWorkbooks(expectedInputStream, actualInputStream)
+  }
+
+  "SheetWriter" should "load template with static text between repeated then substitution row" in {
+    val templateName = "staticText"
+    val outputWorkbook = new SXSSFWorkbook(100)
+    val templateStream = new ByteArrayOutputStream()
+    val expectedStream = new ByteArrayOutputStream()
+    val actualStream = new ByteArrayOutputStream()
+
+    val schema = Map(
+      "$REP.string_field" -> YamlEntry(KeyType.repeated, YamlCellType.string, YamlCellType.string),
+      "$REP.long_field" -> YamlEntry(KeyType.repeated, YamlCellType.long, YamlCellType.double),
+      "$REP.double_field" -> YamlEntry(KeyType.repeated, YamlCellType.double, YamlCellType.double),
+
+      "$KEY.string_field" -> YamlEntry(KeyType.single, YamlCellType.string, YamlCellType.string),
+      "$KEY.long_field" -> YamlEntry(KeyType.single, YamlCellType.long, YamlCellType.double),
+      "$KEY.double_field" -> YamlEntry(KeyType.single, YamlCellType.double, YamlCellType.double),
+    )
+
+    val repeatedModels = List(
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+    )
+    val staticModel = StaticTemplateModel(Some("static text"), Some(12), Some(12.4))
+
+
+    val repeatedModelsSeq1 = repeatedModels.map(getModelSeq)
+    val staticModelSeq = getModelSeq(staticModel)
+
+    val templateRows: Seq[Iterable[(String, CellValue)]] = Seq(
+      // Row with static text, empty cell, and number
+      repeatedModelsSeq1.head,
+      Seq(
+        (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("static_text")),
+        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1337)),
+      ),
+      staticModelSeq
+    )
+
+    val expectedRows = repeatedModelsSeq1 ++ Seq(
+      Seq(
+        (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("static_text")),
+        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1337))
+      ),
+      staticModelSeq
+    )
+
+    val templateBook = ExcelTestHelpers.generateTestWorkbook(templateName, templateRows, insertRowModelKeys = true)
+    templateBook.write(templateStream)
+    ExcelTestHelpers.generateTestWorkbook(templateName, expectedRows)
+      .write(expectedStream)
+
+    val repeatedData = Vector(
+      DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+      DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+      DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+      DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+      DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+    )
+
+    val staticData = Vector(
+      DataCell("string_field", "static text"),
+      DataCell("long_field", 12),
+      DataCell("double_field", 12.4)
+    )
+
+    val data = Iterator((Vector.empty, repeatedData), (staticData, Vector.empty))
+    val sheetWriter = AppendOnlySheetWriter(templateBook.getSheet(templateName), outputWorkbook, schema, mutable.Map.empty)
+    sheetWriter.writeData(data)
+    outputWorkbook.write(actualStream)
+
+    val expectedInputStream = new ByteArrayInputStream(expectedStream.toByteArray)
+    val actualInputStream = new ByteArrayInputStream(actualStream.toByteArray)
+    ExcelTestHelpers.assertEqualsWorkbooks(expectedInputStream, actualInputStream)
+  }
+
+  "SheetWriter" should "load template with static text between substitution then repeated row" in {
+    val templateName = "staticText"
+    val outputWorkbook = new SXSSFWorkbook(100)
+    val templateStream = new ByteArrayOutputStream()
+    val expectedStream = new ByteArrayOutputStream()
+    val actualStream = new ByteArrayOutputStream()
+
+    val schema = Map(
+      "$REP.string_field" -> YamlEntry(KeyType.repeated, YamlCellType.string, YamlCellType.string),
+      "$REP.long_field" -> YamlEntry(KeyType.repeated, YamlCellType.long, YamlCellType.double),
+      "$REP.double_field" -> YamlEntry(KeyType.repeated, YamlCellType.double, YamlCellType.double),
+
+      "$KEY.string_field" -> YamlEntry(KeyType.single, YamlCellType.string, YamlCellType.string),
+      "$KEY.long_field" -> YamlEntry(KeyType.single, YamlCellType.long, YamlCellType.double),
+      "$KEY.double_field" -> YamlEntry(KeyType.single, YamlCellType.double, YamlCellType.double),
+    )
+
+    val repeatedModels = List(
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+      RepTemplateModel(Some("text"), Some(1234), Some(1234)),
+    )
+    val staticModel = StaticTemplateModel(Some("static text"), Some(12), Some(12.4))
+
+
+    val repeatedModelsSeq1 = repeatedModels.map(getModelSeq)
+    val staticModelSeq = getModelSeq(staticModel)
+
+    val templateRows: Seq[Iterable[(String, CellValue)]] = Seq(
+      // Row with static text, empty cell, and number
+      staticModelSeq,
+      Seq(
+        (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("static_text")),
+        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1337)),
+      ),
+      repeatedModelsSeq1.head,
+    )
+
+    val expectedRows = Seq(
+      staticModelSeq,
+      Seq(
+        (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("static_text")),
+        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1337))
+      ),
+    ) ++ repeatedModelsSeq1
+
+    val templateBook = ExcelTestHelpers.generateTestWorkbook(templateName, templateRows, insertRowModelKeys = true)
+    templateBook.write(templateStream)
+    ExcelTestHelpers.generateTestWorkbook(templateName, expectedRows)
+      .write(expectedStream)
+
+    val repeatedData = Vector(
+      DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+      DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+      DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+      DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+      DataRow.Builder().addCell("string_field", "text").addCell("long_field", 1234).addCell("double_field", 1234.0).build(),
+    )
+
+    val staticData = Vector(
+      DataCell("string_field", "static text"),
+      DataCell("long_field", 12),
+      DataCell("double_field", 12.4)
+    )
+
+    val data = Iterator((staticData, Vector.empty), (Vector.empty, repeatedData))
+    val sheetWriter = AppendOnlySheetWriter(templateBook.getSheet(templateName), outputWorkbook, schema, mutable.Map.empty)
+    sheetWriter.writeData(data)
+    outputWorkbook.write(actualStream)
+
+    val expectedInputStream = new ByteArrayInputStream(expectedStream.toByteArray)
+    val actualInputStream = new ByteArrayInputStream(actualStream.toByteArray)
+    ExcelTestHelpers.assertEqualsWorkbooks(expectedInputStream, actualInputStream)
+  }
+
   private def getRandomCell(templateWorkbook: XSSFWorkbook, row: XSSFRow, index: Int): XSSFCell = {
     val style = ExcelTestHelpers.randomCellStyle(templateWorkbook)
     val cell = row.createCell(index)
