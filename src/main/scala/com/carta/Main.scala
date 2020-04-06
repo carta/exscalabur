@@ -21,8 +21,8 @@ object Main extends App {
 
     val repeatedData: List[DataRow] = List(
       DataRow.Builder().addCell("animal", "monkey").build(),
-        DataRow.Builder().addCell("animal", "horse").build(),
-        DataRow.Builder().addCell("animal", "cow").build(),
+      DataRow.Builder().addCell("animal", "horse").build(),
+      DataRow.Builder().addCell("animal", "cow").build(),
     )
 
     val repeatedData2 = List(
