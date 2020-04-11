@@ -4,11 +4,9 @@ import java.io.File
 
 import com.carta.UnitSpec
 
-import scala.collection.mutable.Stack
-
 class YamlReaderSpec extends UnitSpec {
-  val testDataPath = "test.yaml"
-  val testDataFile = new File(getClass.getClassLoader.getResource(testDataPath).toURI)
+  val testDataPath: String = getClass.getResource("/test.yaml").getFile
+  val testDataFile: File = new File(testDataPath)
 
   "YAML Reader" should "Produce YamlEntries given yaml file" in {
     val expectedData = Vector(

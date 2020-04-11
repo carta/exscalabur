@@ -19,9 +19,8 @@ class YamlReader(private val mapper: ObjectMapper) {
     parseFromContent(yamlData)
   }
 
-  def parse(resourcePath: String): Map[String, YamlEntry] = {
-    val yamlData = Source.fromResource(resourcePath).mkString
-    parseFromContent(yamlData)
+  def parse(path: String): Map[String, YamlEntry] = {
+    this.parse(new File(path))
   }
 
   private def parseFromContent(content: String): Map[String, YamlEntry] = {
@@ -30,9 +29,7 @@ class YamlReader(private val mapper: ObjectMapper) {
     }
     else {
       val yamlMap: Map[String, EntryBuilder] = mapper.readValue(content, parseTypeRef)
-      yamlMap.map { case (yamlKey, keyObject) =>
-        yamlKey -> keyObject.build()
-      }
+      yamlMap.mapValues(entryBuilder => entryBuilder.build())
     }
   }
 }
