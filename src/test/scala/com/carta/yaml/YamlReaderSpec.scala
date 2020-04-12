@@ -10,9 +10,9 @@ class YamlReaderSpec extends UnitSpec {
 
   "YAML Reader" should "Produce YamlEntries given yaml file" in {
     val expectedData = Vector(
-      YamlEntry(KeyType.single, YamlCellType.string, YamlCellType.string),
-      YamlEntry(KeyType.repeated, YamlCellType.double, YamlCellType.double),
-      YamlEntry(KeyType.single, YamlCellType.long, YamlCellType.date)
+      YamlEntry(DataType.string, ExcelType.string),
+      YamlEntry(DataType.double, ExcelType.number),
+      YamlEntry(DataType.long, ExcelType.date)
     )
 
     val yamlReader = YamlReader()
@@ -25,9 +25,9 @@ class YamlReaderSpec extends UnitSpec {
     val keyObjects = YamlReader().parse(testDataFile)
 
     val expectedData = Vector(
-      YamlEntry(KeyType.single, YamlCellType.string, YamlCellType.string),
-      YamlEntry(KeyType.repeated, YamlCellType.double, YamlCellType.double),
-      YamlEntry(KeyType.single, YamlCellType.long, YamlCellType.date)
+      YamlEntry(DataType.string, ExcelType.string),
+      YamlEntry(DataType.double, ExcelType.number),
+      YamlEntry(DataType.long, ExcelType.date)
     )
 
     keyObjects.values should contain theSameElementsAs expectedData

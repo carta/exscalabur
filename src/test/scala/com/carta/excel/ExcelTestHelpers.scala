@@ -4,7 +4,7 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream, File, InputStream}
 import java.util.Date
 
 import com.carta.excel.ExportModelUtils.ModelMap
-import com.carta.yaml.{KeyType, YamlCellType, YamlEntry}
+import com.carta.yaml.{DataType, ExcelType, YamlEntry}
 import org.apache.poi.ss.usermodel.{BorderStyle, CellStyle, CellType}
 import org.apache.poi.xssf.usermodel._
 import org.scalatest.matchers.should.Matchers
@@ -100,15 +100,15 @@ object ExcelTestHelpers extends Matchers {
   def getModelSchema(t: StaticTemplateModel): Map[String, YamlEntry] = {
     val schemaBuilder = Map.newBuilder[String, YamlEntry]
     if (t.stringField.isDefined) {
-      val yamlEntry = YamlEntry(KeyType.single, YamlCellType.string, YamlCellType.string)
+      val yamlEntry = YamlEntry(DataType.string, ExcelType.string)
       schemaBuilder += s"${ExportModelUtils.SUBSTITUTION_KEY}.string_field" -> yamlEntry
     }
     if (t.doubleField.isDefined) {
-      val yamlEntry = YamlEntry(KeyType.single, YamlCellType.double, YamlCellType.double)
+      val yamlEntry = YamlEntry(DataType.double, ExcelType.number)
       schemaBuilder += s"${ExportModelUtils.SUBSTITUTION_KEY}.double_field" -> yamlEntry
     }
     if (t.longField.isDefined) {
-      val yamlEntry = YamlEntry(KeyType.single, YamlCellType.long, YamlCellType.double)
+      val yamlEntry = YamlEntry(DataType.long, ExcelType.number)
       schemaBuilder += s"${ExportModelUtils.SUBSTITUTION_KEY}.long_field" -> yamlEntry
     }
     schemaBuilder.result()

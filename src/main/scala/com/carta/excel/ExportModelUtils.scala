@@ -2,6 +2,7 @@ package com.carta.excel
 
 import java.time.Instant
 import java.util.Date
+import scala.util.control.Exception.allCatch
 
 // TODO: Inline or rename or something
 object ExportModelUtils {
@@ -13,15 +14,25 @@ object ExportModelUtils {
   def toCellStringFromString(string: String): CellValue = CellString(string)
 
   def toCellDouble(num: Number): CellValue = CellDouble(num.doubleValue)
+
+  def toCellString(value: Any): CellValue = CellString(value.toString)
+
+  def toCellDoubleFromString(num: String): CellValue = {
+    (allCatch opt num.toDouble)
+      .map(CellDouble)
+      .getOrElse(CellString(num))
+  }
+
+
   // to CellDouble Option converters
   def toCellDoubleFromDouble(double: Double): CellValue = CellDouble(double)
 
   def toCellDoubleFromLong(long: Long): CellValue = CellDouble(long.toDouble)
 
   // to CellDate Option converters
-  def toCellDateFromLong(epochMillis: Long): CellDate =
+  def toCellDateFromLong(epochMillis: Number): CellDate =
   // epochMillis * hours * minutes * seconds * milliseconds
-    CellDate(Date.from(Instant.ofEpochMilli(epochMillis * 24 * 60 * 60 * 1000)))
+    CellDate(Date.from(Instant.ofEpochMilli(epochMillis.longValue * 24 * 60 * 60 * 1000)))
 
   def toCellDateFromTimestampMillis(epochMillis: Long, offsetSeconds: Long = 0): CellDate =
     CellDate(new Date(epochMillis + offsetSeconds * 1000))

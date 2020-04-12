@@ -1,14 +1,11 @@
 $KEY.key1:
-  keyType: "single"
-  columnType: "string"
+  dataType: "string"
   excelType: "string"
 
 $KEY.key2:
-  keyType: "repeated"
-  columnType: "double"
-  excelType: "double"
+  dataType: "double"
+  excelType: "number"
 
 $KEY.key3:
-  keyType: "single"
-  columnType: "long"
+  dataType: "long"
   excelType: "date"
