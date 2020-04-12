@@ -10,7 +10,7 @@ import org.scalatest.matchers.should.Matchers
 class ExscalaburSpec extends AnyFlatSpec with Matchers {
 
   "Exscalabur" should "write excel file to disk" in {
-    val filePath = File.createTempFile("ExscalaburSpec", ".xlsx").getAbsolutePath
+    val filePath = ExcelTestHelpers.createTempFile("ExscalaburSpec").getAbsolutePath
     val staticData = DataRow.Builder()
       .addCell("col1", "col1Value")
       .addCell("col2", 1.45)
@@ -48,8 +48,7 @@ class ExscalaburSpec extends AnyFlatSpec with Matchers {
   }
 
   "Exscalabur" should "write excel file to stream" in {
-
-    val filePath = File.createTempFile("writerSpec", ".xlsx").getAbsolutePath
+    val filePath = ExcelTestHelpers.createTempFile("writerSpec").getAbsolutePath
     val fileStream = new FileOutputStream(filePath)
 
     val staticData = DataRow.Builder()
@@ -92,7 +91,7 @@ class ExscalaburSpec extends AnyFlatSpec with Matchers {
   }
 
   "Exscalabur" should "keep blank rows when copying sequential repeated rows" in {
-    val filePath = File.createTempFile("sepRepRows", ".xlsx").getAbsolutePath
+    val filePath = ExcelTestHelpers.createTempFile("sepRepRows").getAbsolutePath
     val animals = List("bear", "eagle", "elephant", "bird", "snake", "pig", "dog", "cat", "penguin", "anteater");
     val weight = List(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
 
@@ -123,7 +122,7 @@ class ExscalaburSpec extends AnyFlatSpec with Matchers {
   }
 
   "Exscalabur" should "write data in parts" in {
-    val filePath = File.createTempFile("sepRepRows", ".xlsx").getAbsolutePath
+    val filePath = ExcelTestHelpers.createTempFile("sepRepRows").getAbsolutePath
     val animals = List("bear", "eagle", "elephant", "bird", "snake", "pig", "dog", "cat", "penguin", "anteater");
     val weight = List(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
 

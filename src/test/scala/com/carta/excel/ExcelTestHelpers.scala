@@ -1,9 +1,8 @@
 package com.carta.excel
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, File, InputStream}
+import java.io.{File, InputStream}
 import java.util.Date
 
-import com.carta.excel.ExportModelUtils.ModelMap
 import com.carta.yaml.{DataType, ExcelType, YamlEntry}
 import org.apache.poi.ss.usermodel.{BorderStyle, CellStyle, CellType}
 import org.apache.poi.xssf.usermodel._
@@ -11,8 +10,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.{Assertion, Succeeded}
 import resource.managed
 
-import scala.collection.JavaConverters._
-import scala.util.{Failure, Random, Success}
+import scala.util.Random
 
 object ExcelTestHelpers extends Matchers {
   // Useful keys for adding certain cells that aren't supported by the substitution or repeated field keys
@@ -29,32 +27,6 @@ object ExcelTestHelpers extends Matchers {
     val f = File.createTempFile(prefix, ".xlsx")
     f.deleteOnExit()
     f
-  }
-
-  def addRow(workbook: XSSFWorkbook, rowIndex: Int, cellValues: IndexedSeq[Option[CellValue]]): XSSFRow = {
-    val sheet: XSSFSheet = workbook.getSheetAt(0)
-    val row: XSSFRow = sheet.createRow(rowIndex)
-
-    cellValues.indices.foreach { i =>
-      val cell = row.createCell(i)
-      cell.setCellStyle(randomCellStyle(workbook))
-
-      cellValues(i).get match {
-        case CellString(s) =>
-          cell.setCellType(CellType.STRING)
-          cell.setCellValue(s)
-        case CellDouble(d) =>
-          cell.setCellType(CellType.NUMERIC)
-          cell.setCellValue(d)
-        case CellDate(d) =>
-          cell.setCellType(CellType.STRING)
-          cell.setCellValue(d)
-        case CellBoolean(b) =>
-          cell.setCellType(CellType.BOOLEAN)
-          cell.setCellValue(b)
-      }
-    }
-    row
   }
 
   def randomCellStyle(workbook: XSSFWorkbook): CellStyle = {
@@ -286,47 +258,6 @@ object ExcelTestHelpers extends Matchers {
                              dx2: Int = 0,
                              dy1: Int = 0,
                              dy2: Int = 0)
-
-  // writeOutputAndVerify creates and writes the contents of the given ByteArrayOutputStreams into an ExcelWorkbook
-  // and then verifies that output of this ExcelWorkbook is as expected
-  def writeOutputAndVerify(templateName: String,
-                           templateStream: ByteArrayOutputStream,
-                           expectedStream: ByteArrayOutputStream,
-                           actualStream: ByteArrayOutputStream,
-                           expectedCopyResult: Option[Int],
-                           staticRowData: ModelMap = Map.empty,
-                           repeatedRowData: Seq[ModelMap] = Seq.empty,
-                           batchSize: Int = 1000,
-                          ): Unit = {
-    val templateBytes = managed(new ByteArrayInputStream(templateStream.toByteArray))
-    val templateStreamMap = Map(templateName -> templateBytes)
-    managed(new ExcelWorkbook(templateStreamMap, 10))
-      .acquireAndGet { workbook =>
-        workbook.sheets(templateName).foreach { templateSheet =>
-          templateSheet.rowIterator().asScala
-            .foldLeft(0) { (outputRow, row) =>
-              workbook.insertRows(
-                templateName,
-                row.getRowNum,
-                templateSheet.getSheetName,
-                outputRow,
-                staticRowData,
-                repeatedRowData
-              ) match {
-                case Failure(e) => fail(e)
-                case Success(nextRow) => nextRow
-              }
-            }
-        }
-        workbook.write(actualStream)
-      }
-
-
-    val expectedInputStream = new ByteArrayInputStream(expectedStream.toByteArray)
-    val actualInputStream = new ByteArrayInputStream(actualStream.toByteArray)
-
-    ExcelTestHelpers.assertEqualsWorkbooks(expectedInputStream, actualInputStream)
-  }
 
   private def assertEqualsFonts(expectedFont: XSSFFont, actualFont: XSSFFont, actualCell: XSSFCell): Assertion = {
     assert(expectedFont.getFamily == actualFont.getFamily, errorLocation(actualCell))
