@@ -1,11 +1,11 @@
 package com.carta.excel
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, File, FileOutputStream}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.util.Date
 
 import com.carta.excel.ExcelTestHelpers.{PictureData, PicturePosition, RepTemplateModel, StaticTemplateModel, generateTestWorkbook, getModelSeq}
-import com.carta.exscalabur.{DataCell, DataRow, Exscalabur}
-import com.carta.yaml.{KeyType, YamlCellType, YamlEntry}
+import com.carta.exscalabur.{DataCell, DataRow}
+import com.carta.yaml.{DataType, ExcelType, YamlEntry}
 import org.apache.poi.ss.usermodel.{CellType, Workbook}
 import org.apache.poi.xssf.streaming.SXSSFWorkbook
 import org.apache.poi.xssf.usermodel.{XSSFCell, XSSFRow, XSSFWorkbook}
@@ -403,9 +403,9 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
       RepTemplateModel(Some("text"), Some(1234), Some(1234)),
     )
     val schema = Map(
-      "$REP.string_field" -> YamlEntry(KeyType.repeated, YamlCellType.string, YamlCellType.string),
-      "$REP.long_field" -> YamlEntry(KeyType.repeated, YamlCellType.long, YamlCellType.double),
-      "$REP.double_field" -> YamlEntry(KeyType.repeated, YamlCellType.double, YamlCellType.double),
+      "$REP.string_field" -> YamlEntry(DataType.string, ExcelType.string),
+      "$REP.long_field" -> YamlEntry(DataType.long, ExcelType.number),
+      "$REP.double_field" -> YamlEntry(DataType.double, ExcelType.number),
     )
     val repeatedModelsSeq = repeatedModels.map(getModelSeq)
 
@@ -475,11 +475,11 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     val lowerStaticModelsSeq = lowerStaticModels.map(getModelSeq)
 
     val schema = Map(
-      "$REP.string_field" -> YamlEntry(KeyType.repeated, YamlCellType.string, YamlCellType.string),
-      "$REP.long_field" -> YamlEntry(KeyType.repeated, YamlCellType.long, YamlCellType.double),
-      "$REP.double_field" -> YamlEntry(KeyType.repeated, YamlCellType.double, YamlCellType.double),
-      "$KEY.string_field" -> YamlEntry(KeyType.single, YamlCellType.string, YamlCellType.string),
-      "$KEY.long_field" -> YamlEntry(KeyType.single, YamlCellType.long, YamlCellType.double),
+      "$REP.string_field" -> YamlEntry(DataType.string, ExcelType.string),
+      "$REP.long_field" -> YamlEntry(DataType.long, ExcelType.number),
+      "$REP.double_field" -> YamlEntry(DataType.double, ExcelType.number),
+      "$KEY.string_field" -> YamlEntry(DataType.string, ExcelType.string),
+      "$KEY.long_field" -> YamlEntry(DataType.long, ExcelType.number),
     )
 
     val templateRows: Seq[Iterable[(String, CellValue)]] = Seq(
@@ -548,11 +548,11 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     val lowerStaticModelsSeq = lowerStaticModels.map(getModelSeq)
 
     val schema = Map(
-      "$REP.string_field" -> YamlEntry(KeyType.repeated, YamlCellType.string, YamlCellType.string),
-      "$REP.long_field" -> YamlEntry(KeyType.repeated, YamlCellType.long, YamlCellType.double),
-      "$REP.double_field" -> YamlEntry(KeyType.repeated, YamlCellType.double, YamlCellType.double),
-      "$KEY.string_field" -> YamlEntry(KeyType.single, YamlCellType.string, YamlCellType.string),
-      "$KEY.long_field" -> YamlEntry(KeyType.single, YamlCellType.long, YamlCellType.double),
+      "$REP.string_field" -> YamlEntry(DataType.string, ExcelType.string),
+      "$REP.long_field" -> YamlEntry(DataType.long, ExcelType.number),
+      "$REP.double_field" -> YamlEntry(DataType.double, ExcelType.number),
+      "$KEY.string_field" -> YamlEntry(DataType.string, ExcelType.string),
+      "$KEY.long_field" -> YamlEntry(DataType.long, ExcelType.number),
     )
 
     val templateRows: Seq[Iterable[(String, CellValue)]] = Seq(
@@ -615,13 +615,13 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     val actualStream = new ByteArrayOutputStream()
 
     val schema = Map(
-      "$REP.string_field" -> YamlEntry(KeyType.repeated, YamlCellType.string, YamlCellType.string),
-      "$REP.long_field" -> YamlEntry(KeyType.repeated, YamlCellType.long, YamlCellType.double),
-      "$REP.double_field" -> YamlEntry(KeyType.repeated, YamlCellType.double, YamlCellType.double),
+      "$REP.string_field" -> YamlEntry(DataType.string, ExcelType.string),
+      "$REP.long_field" -> YamlEntry(DataType.long, ExcelType.number),
+      "$REP.double_field" -> YamlEntry(DataType.double, ExcelType.number),
 
-      "$REP.string_field2" -> YamlEntry(KeyType.repeated, YamlCellType.string, YamlCellType.string),
-      "$REP.long_field2" -> YamlEntry(KeyType.repeated, YamlCellType.long, YamlCellType.double),
-      "$REP.double_field2" -> YamlEntry(KeyType.repeated, YamlCellType.double, YamlCellType.double),
+      "$REP.string_field2" -> YamlEntry(DataType.string, ExcelType.string),
+      "$REP.long_field2" -> YamlEntry(DataType.long, ExcelType.number),
+      "$REP.double_field2" -> YamlEntry(DataType.double, ExcelType.number),
     )
 
     val repeatedModels = List(
@@ -690,13 +690,13 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     val actualStream = new ByteArrayOutputStream()
 
     val schema = Map(
-      "$KEY.string_field" -> YamlEntry(KeyType.single, YamlCellType.string, YamlCellType.string),
-      "$KEY.long_field" -> YamlEntry(KeyType.single, YamlCellType.long, YamlCellType.double),
-      "$KEY.double_field" -> YamlEntry(KeyType.single, YamlCellType.double, YamlCellType.double),
+      "$KEY.string_field" -> YamlEntry(DataType.string, ExcelType.string),
+      "$KEY.long_field" -> YamlEntry(DataType.long, ExcelType.number),
+      "$KEY.double_field" -> YamlEntry(DataType.double, ExcelType.number),
 
-      "$KEY.string_field2" -> YamlEntry(KeyType.single, YamlCellType.string, YamlCellType.string),
-      "$KEY.long_field2" -> YamlEntry(KeyType.single, YamlCellType.long, YamlCellType.double),
-      "$KEY.double_field2" -> YamlEntry(KeyType.single, YamlCellType.double, YamlCellType.double),
+      "$KEY.string_field2" -> YamlEntry(DataType.string, ExcelType.string),
+      "$KEY.long_field2" -> YamlEntry(DataType.long, ExcelType.number),
+      "$KEY.double_field2" -> YamlEntry(DataType.double, ExcelType.number),
     )
 
     val staticModel = StaticTemplateModel(Some("text"), Some(1233), Some(1234))
@@ -758,13 +758,13 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     val actualStream = new ByteArrayOutputStream()
 
     val schema = Map(
-      "$REP.string_field" -> YamlEntry(KeyType.repeated, YamlCellType.string, YamlCellType.string),
-      "$REP.long_field" -> YamlEntry(KeyType.repeated, YamlCellType.long, YamlCellType.double),
-      "$REP.double_field" -> YamlEntry(KeyType.repeated, YamlCellType.double, YamlCellType.double),
+      "$REP.string_field" -> YamlEntry(DataType.string, ExcelType.string),
+      "$REP.long_field" -> YamlEntry(DataType.long, ExcelType.number),
+      "$REP.double_field" -> YamlEntry(DataType.double, ExcelType.number),
 
-      "$KEY.string_field" -> YamlEntry(KeyType.single, YamlCellType.string, YamlCellType.string),
-      "$KEY.long_field" -> YamlEntry(KeyType.single, YamlCellType.long, YamlCellType.double),
-      "$KEY.double_field" -> YamlEntry(KeyType.single, YamlCellType.double, YamlCellType.double),
+      "$KEY.string_field" -> YamlEntry(DataType.string, ExcelType.string),
+      "$KEY.long_field" -> YamlEntry(DataType.long, ExcelType.number),
+      "$KEY.double_field" -> YamlEntry(DataType.double, ExcelType.number),
     )
 
     val repeatedModels = List(
@@ -835,13 +835,13 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     val actualStream = new ByteArrayOutputStream()
 
     val schema = Map(
-      "$REP.string_field" -> YamlEntry(KeyType.repeated, YamlCellType.string, YamlCellType.string),
-      "$REP.long_field" -> YamlEntry(KeyType.repeated, YamlCellType.long, YamlCellType.double),
-      "$REP.double_field" -> YamlEntry(KeyType.repeated, YamlCellType.double, YamlCellType.double),
+      "$REP.string_field" -> YamlEntry(DataType.string, ExcelType.string),
+      "$REP.long_field" -> YamlEntry(DataType.long, ExcelType.number),
+      "$REP.double_field" -> YamlEntry(DataType.double, ExcelType.number),
 
-      "$KEY.string_field" -> YamlEntry(KeyType.single, YamlCellType.string, YamlCellType.string),
-      "$KEY.long_field" -> YamlEntry(KeyType.single, YamlCellType.long, YamlCellType.double),
-      "$KEY.double_field" -> YamlEntry(KeyType.single, YamlCellType.double, YamlCellType.double),
+      "$KEY.string_field" -> YamlEntry(DataType.string, ExcelType.string),
+      "$KEY.long_field" -> YamlEntry(DataType.long, ExcelType.number),
+      "$KEY.double_field" -> YamlEntry(DataType.double, ExcelType.number),
     )
 
     val repeatedModels = List(

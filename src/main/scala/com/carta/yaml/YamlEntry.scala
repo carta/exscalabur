@@ -16,22 +16,18 @@ import com.fasterxml.jackson.module.scala.JsonScalaEnumeration
 
 case class YamlEntry
 (
-  keyType: KeyType.Value,
-  columnType: YamlCellType.Value,
-  excelType: YamlCellType.Value
+  dataType: DataType.Value,
+  excelType: ExcelType.Value
 )
 
 class EntryBuilder(
-                    @JsonScalaEnumeration(classOf[KeyTypeReference])
-                    var keyType: KeyType.Value,
+                    @JsonScalaEnumeration(classOf[DataTypeReference])
+                    dataType: DataType.Value,
 
-                    @JsonScalaEnumeration(classOf[CellTypeReference])
-                    columnType: YamlCellType.Value,
-
-                    @JsonScalaEnumeration(classOf[CellTypeReference])
-                    excelType: YamlCellType.Value) {
+                    @JsonScalaEnumeration(classOf[ExcelTypeReference])
+                    excelType: ExcelType.Value) {
   def build(): YamlEntry = {
-    YamlEntry(keyType, columnType, excelType)
+    YamlEntry(dataType, excelType)
   }
 }
 

@@ -3,14 +3,14 @@ package com.carta.excel
 import java.io.{File, FileInputStream, FileOutputStream}
 
 import com.carta.exscalabur.{DataRow, Exscalabur}
-import com.carta.yaml.{KeyType, YamlCellType, YamlEntry}
+import com.carta.yaml.{DataType, ExcelType, YamlEntry}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 class ExscalaburSpec extends AnyFlatSpec with Matchers {
 
   "Exscalabur" should "write excel file to disk" in {
-    val filePath = File.createTempFile("ExscalaburSpec", ".xlsx").getAbsolutePath
+    val filePath = ExcelTestHelpers.createTempFile("ExscalaburSpec").getAbsolutePath
     val staticData = DataRow.Builder()
       .addCell("col1", "col1Value")
       .addCell("col2", 1.45)
@@ -29,10 +29,10 @@ class ExscalaburSpec extends AnyFlatSpec with Matchers {
     )
 
     val schema = Map(
-      "$KEY.col1" -> YamlEntry(KeyType.single, YamlCellType.string, YamlCellType.string),
-      "$KEY.col2" -> YamlEntry(KeyType.single, YamlCellType.double, YamlCellType.double),
-      "$REP.col1" -> YamlEntry(KeyType.repeated, YamlCellType.string, YamlCellType.string),
-      "$REP.col2" -> YamlEntry(KeyType.repeated, YamlCellType.double, YamlCellType.double),
+      "$KEY.col1" -> YamlEntry(DataType.string, ExcelType.string),
+      "$KEY.col2" -> YamlEntry(DataType.double, ExcelType.number),
+      "$REP.col1" -> YamlEntry(DataType.string, ExcelType.string),
+      "$REP.col2" -> YamlEntry(DataType.double, ExcelType.number),
     )
 
     val exscalabur = Exscalabur(
@@ -48,8 +48,7 @@ class ExscalaburSpec extends AnyFlatSpec with Matchers {
   }
 
   "Exscalabur" should "write excel file to stream" in {
-
-    val filePath = File.createTempFile("writerSpec", ".xlsx").getAbsolutePath
+    val filePath = ExcelTestHelpers.createTempFile("writerSpec").getAbsolutePath
     val fileStream = new FileOutputStream(filePath)
 
     val staticData = DataRow.Builder()
@@ -69,10 +68,10 @@ class ExscalaburSpec extends AnyFlatSpec with Matchers {
     )
 
     val schema = Map(
-      "$KEY.col1" -> YamlEntry(KeyType.single, YamlCellType.string, YamlCellType.string),
-      "$KEY.col2" -> YamlEntry(KeyType.single, YamlCellType.double, YamlCellType.double),
-      "$REP.col1" -> YamlEntry(KeyType.repeated, YamlCellType.string, YamlCellType.string),
-      "$REP.col2" -> YamlEntry(KeyType.repeated, YamlCellType.double, YamlCellType.double),
+      "$KEY.col1" -> YamlEntry(DataType.string, ExcelType.string),
+      "$KEY.col2" -> YamlEntry(DataType.double, ExcelType.number),
+      "$REP.col1" -> YamlEntry(DataType.string, ExcelType.string),
+      "$REP.col2" -> YamlEntry(DataType.double, ExcelType.number),
     )
 
     val templatePath = getClass.getResource("/excel/templates/writerSpec.xlsx").getFile
@@ -92,7 +91,7 @@ class ExscalaburSpec extends AnyFlatSpec with Matchers {
   }
 
   "Exscalabur" should "keep blank rows when copying sequential repeated rows" in {
-    val filePath = File.createTempFile("sepRepRows", ".xlsx").getAbsolutePath
+    val filePath = ExcelTestHelpers.createTempFile("sepRepRows").getAbsolutePath
     val animals = List("bear", "eagle", "elephant", "bird", "snake", "pig", "dog", "cat", "penguin", "anteater");
     val weight = List(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
 
@@ -103,8 +102,8 @@ class ExscalaburSpec extends AnyFlatSpec with Matchers {
     }
 
     val schema = Map(
-      "$REP.animal" -> YamlEntry(KeyType.repeated, YamlCellType.string, YamlCellType.string),
-      "$REP.weight" -> YamlEntry(KeyType.repeated, YamlCellType.long, YamlCellType.double),
+      "$REP.animal" -> YamlEntry(DataType.string, ExcelType.string),
+      "$REP.weight" -> YamlEntry(DataType.long, ExcelType.number),
     )
 
     val templatePath = getClass.getResource("/excel/templates/seqRepRows.xlsx").getFile
@@ -123,7 +122,7 @@ class ExscalaburSpec extends AnyFlatSpec with Matchers {
   }
 
   "Exscalabur" should "write data in parts" in {
-    val filePath = File.createTempFile("sepRepRows", ".xlsx").getAbsolutePath
+    val filePath = ExcelTestHelpers.createTempFile("sepRepRows").getAbsolutePath
     val animals = List("bear", "eagle", "elephant", "bird", "snake", "pig", "dog", "cat", "penguin", "anteater");
     val weight = List(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
 
@@ -136,8 +135,8 @@ class ExscalaburSpec extends AnyFlatSpec with Matchers {
     val repeatedData3 = weight.map(weight => DataRow.Builder().addCell("weight", weight).build())
 
     val schema = Map(
-      "$REP.animal" -> YamlEntry(KeyType.repeated, YamlCellType.string, YamlCellType.string),
-      "$REP.weight" -> YamlEntry(KeyType.repeated, YamlCellType.long, YamlCellType.double),
+      "$REP.animal" -> YamlEntry(DataType.string, ExcelType.string),
+      "$REP.weight" -> YamlEntry(DataType.long, ExcelType.number),
     )
 
     val templatePath = getClass.getResource("/excel/templates/seqRepRows.xlsx").getFile

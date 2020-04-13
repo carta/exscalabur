@@ -10,9 +10,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.carta.excel
+package com.carta.yaml
 
+import com.fasterxml.jackson.core.`type`.TypeReference
 
-object TabType extends Enumeration {
-  val repeated, single = Value
+object DataType extends Enumeration {
+  type DataCellType = Value
+  val string, double, long = Value
 }
+
+class DataTypeReference extends TypeReference[DataType.type]
