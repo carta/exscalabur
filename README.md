@@ -30,7 +30,6 @@ Add it as a dependency:
 | `clean`     | Removes generated files from the target directory    |
 | `update`    | Updates external dependencies                        |
 | `package`   | Creates JAR                                          |
-
 | `publishLocal` | Publishes to local IVY repository, by default in `~/.ivy2/local`
 
 ## How To Use
