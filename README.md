@@ -74,6 +74,8 @@ KEYNAME2:
 
 A `YamlReader` class is provided to convert the yaml file into an in-code representation. 
 
+The `YamlReader` can be imported from `com.carta.yaml.YamlReader`
+
 For the above template Excel file, the following may be an example of the `schema` definition:
 
 ```yaml
@@ -107,6 +109,8 @@ Alternatively, this **schema** may be provided in-code as a `Map[String, YamlEnt
 The Map's keys are the `KEYNAME`s.
 `YamlEntry` is a provided case class representing the above YAML structure.  
 
+`YamlEntry` can be imported using: `import com.carta.yaml.YamlEntry`
+
 ## Data Substitution
 
 ### Single-Substitution Data
@@ -118,11 +122,12 @@ To pass data in to be substituted into a `$KEY.` template cell, an instance of a
 For example, in the above example, we may have `DataCell`s like:
 
 ```Scala
+import com.carta.exscalabur.DataCell
+
 DataCell("fname", "Joe");
 DataCell("lname", "Person")
 DataCell("conclusion", "EXSCALABUR")
 ```
-
 
 ### Repeated Data Substitution
 To pass data to be substituted into a repeated row, instances of `DataRow` are passed in, containing `DataCell`s for each cell in the repeated row.
@@ -130,6 +135,8 @@ To pass data to be substituted into a repeated row, instances of `DataRow` are p
 For the example, our `DataRow` instances might look like:
 
 ```scala
+import com.carta.exscalabur.DataRow
+
 DataRow().addCell("animal", "monkey").addCell("weight", 12.1)
 DataRow().addCell("animal", "horse").addCell("weight", 12.2)
 DataRow().addCell("element", "hydrogen")
@@ -150,6 +157,8 @@ __Exscalabur does not support sub-tables arranged horizontally__
 Lastly, all that's left is to write the data. To do so, create an instance of a `Exscalabur` object:
 
 ```scala
+import com.carta.exscalabur.Exscalabur
+
 Exscalabur(
   templates, // Iterable[String], representing paths to the template sheets
   schema, // The in-code schema representation explained above
@@ -162,7 +171,7 @@ For every sheet to be written to, create a `SheetWriter`:
 ```scala
 exscalabur.getAppendOnlySheetWriter(sheetName) // sheetName is as defined in the template sheet.
 ```
-Note, the `sheetName` used here __must match the template exactly__
+Note, the `sheetName` used here comes from the tab in the template. It __must match the template exactly__
 
 Write static data: `sheetWriter.writeStaticData(staticData: Seq[DataCell])`
 
