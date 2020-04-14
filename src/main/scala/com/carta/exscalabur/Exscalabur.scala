@@ -24,7 +24,6 @@ import scala.collection.mutable
 
 //TODO verify no keys in yaml match
 class Exscalabur(sheetsByName: Map[String, XSSFSheet],
-                 outputStream: OutputStream,
                  outputWorkbook: SXSSFWorkbook,
                  cellStyleCache: mutable.Map[CellStyle, Int],
                  schema: Map[String, YamlEntry]) {
@@ -34,7 +33,9 @@ class Exscalabur(sheetsByName: Map[String, XSSFSheet],
     AppendOnlySheetWriter(sheet, outputWorkbook, schema, cellStyleCache)
   }
 
-  def writeToDisk(): Unit = {
+  def exportToFile(path: String): Unit = exportToStream(new FileOutputStream(path))
+
+  def exportToStream(outputStream: OutputStream): Unit = {
     outputWorkbook.write(outputStream)
     outputWorkbook.dispose()
     outputWorkbook.close()
@@ -44,18 +45,16 @@ class Exscalabur(sheetsByName: Map[String, XSSFSheet],
 
 object Exscalabur {
   def apply(templatePaths: Iterable[String],
-            outputPath: String,
             schema: Map[String, YamlEntry],
             windowSize: Int): Exscalabur = {
     val sheetsByName = templatePaths.map { str =>
       val sheet = new XSSFWorkbook(str).getSheetAt(0)
       sheet.getSheetName -> sheet
     }.toMap
-    val outputStream = new FileOutputStream(outputPath)
 
     val outputWorkbook = new SXSSFWorkbook(windowSize)
     val cellStyleCache = mutable.Map.empty[CellStyle, Int]
 
-    new Exscalabur(sheetsByName, outputStream, outputWorkbook, cellStyleCache, schema)
+    new Exscalabur(sheetsByName, outputWorkbook, cellStyleCache, schema)
   }
 }

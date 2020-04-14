@@ -12,45 +12,30 @@
  */
 package com.carta.exscalabur
 
+import scala.collection.immutable
 import scala.collection.immutable.VectorBuilder
-import scala.collection.mutable
 
-class DataRow(val data: Map[String, CellType]) {
-  def getCells: Iterable[DataCell] = data.map { case (key, value) => DataCell(key, value) }
+class DataRow private(val cells: VectorBuilder[DataCell]) {
+  def addCell(cell: DataCell): DataRow = {
+    cells += cell
+    this
+  }
+
+  def addCell(key: String, value: CellType): DataRow = addCell(DataCell(key, value))
+
+  def addCell(key: String, value: Long): DataRow = addCell(DataCell(key, value))
+
+  def addCell(key: String, value: Double): DataRow = addCell(DataCell(key, value))
+
+  def addCell(key: String, value: String): DataRow = addCell(DataCell(key, value))
+
+  def getCellMap: Map[String, CellType] = cells.result().map(cell => cell.asTuple).toMap
+
+  def getCells: Seq[DataCell] = cells.result()
 }
 
 object DataRow {
-
-  class Builder() {
-    private val data = new VectorBuilder[DataCell]
-    private val dataMap = mutable.Map.empty[String, DataCell]
-
-    def addCell(cell: DataCell): Builder = {
-      data += cell
-      this
-    }
-
-    def addAllCells(cells: Iterable[DataCell]): Builder = {
-      cells.foreach(addCell)
-      this
-    }
-
-    def build(): DataRow = new DataRow(data.result().map(cell => cell.asTuple).toMap)
-
-    def addCell(key: String, value: CellType): Builder = addCell(DataCell(key, value))
-
-    def addCell(key: String, value: Long): Builder = addCell(DataCell(key, value))
-
-    def addCell(key: String, value: String): Builder = addCell(DataCell(key, value))
-
-    def addCell(key: String, value: Double): Builder = addCell(DataCell(key, value))
-
+  def apply(): DataRow = {
+    new DataRow(new VectorBuilder[DataCell])
   }
-
-  object Builder {
-    def apply() = new Builder
-  }
-
 }
-
-

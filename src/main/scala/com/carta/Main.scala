@@ -26,41 +26,39 @@ object Main extends App {
 
     val sword = Exscalabur(
       templates,
-      "/home/katie/Documents/Exscalabur Demo/out/exscalabur.xlsx",
       yamlData,
       100
     )
 
     val repeatedData: List[DataRow] = List(
-      DataRow.Builder().addCell("animal", "monkey").build(),
-      DataRow.Builder().addCell("animal", "horse").build(),
-      DataRow.Builder().addCell("animal", "cow").build(),
+      DataRow().addCell("animal", "monkey"),
+      DataRow().addCell("animal", "horse"),
+      DataRow().addCell("animal", "cow"),
     )
 
     val repeatedData2 = List(
-      DataRow.Builder().addCell("animal", "dog").build(),
-      DataRow.Builder().addCell("animal", "cat").build(),
+      DataRow().addCell("animal", "dog"),
+      DataRow().addCell("animal", "cat"),
     )
 
     val repeatedData3 = List(
-      DataRow.Builder().addCell("element", "hydrogen").build(),
-      DataRow.Builder().addCell("element", "helium").build(),
-      DataRow.Builder().addCell("element", "lithium").build()
+      DataRow().addCell("element", "hydrogen"),
+      DataRow().addCell("element", "helium"),
+      DataRow().addCell("element", "lithium")
     )
+
+    val staticData = List(DataCell("name", "katie"))
 
 
     val sheetWriter = sword.getAppendOnlySheetWriter("Sheet1")
-    val dataProvider: Iterator[(List[DataCell], List[DataRow])] = Iterator(
-      (List.empty, repeatedData),
-      (List.empty, repeatedData2),
-      (List.empty, repeatedData2),
-      (List(DataCell("name", "katie")), List.empty),
-      (List.empty, repeatedData3)
-    )
+
+    sheetWriter.writeRepeatedData(repeatedData)
+    sheetWriter.writeRepeatedData(repeatedData2)
+    sheetWriter.writeRepeatedData(repeatedData2)
+    sheetWriter.writeStaticData(staticData)
+    sheetWriter.writeRepeatedData(repeatedData3)
 
 
-    sheetWriter.writeData(dataProvider)
-
-    sword.writeToDisk()
+    sword.exportToFile("/home/katie/Documents/Exscalabur Demo/out/exscalabur.xlsx")
   }
 }
