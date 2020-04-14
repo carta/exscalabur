@@ -18,7 +18,7 @@ import java.util.Date
 import com.carta.excel.ExportModelUtils.ModelMap
 import com.carta.excel.implicits.ExtendedRow._
 import com.carta.excel.implicits.ExtendedSheet._
-import com.carta.exscalabur.{CellType => _, _}
+import com.carta.exscalabur._
 import com.carta.yaml.YamlEntry
 import org.apache.poi.ss.usermodel._
 import org.apache.poi.xssf.streaming.SXSSFWorkbook
@@ -42,23 +42,30 @@ class AppendOnlySheetWriter
     templateSheet.getPictures.foreach(outputSheet.copyPicture)
   }
 
-  def writeData(dataProvider: Iterator[(Iterable[DataCell], Seq[DataRow])]): Unit = {
-    dataProvider.foreach { case (staticData, repeatedData) =>
-      val staticDataModelMap = ModelMap(ExportModelUtils.SUBSTITUTION_KEY, staticData, schema)
-      val repeatedDataModelMaps = repeatedData.map { dataRow =>
-        ModelMap(ExportModelUtils.REPEATED_FIELD_KEY, dataRow.getCells, schema)
-      }
-      outputRowIndex = writeDataToRows(staticDataModelMap, repeatedDataModelMaps)
-    }
+  def writeStaticData(data: Seq[DataCell]): Unit = {
+    val staticDataMap = ModelMap(ExportModelUtils.SUBSTITUTION_KEY, data, schema)
+    outputRowIndex = writeDataToRows(staticData = staticDataMap)
   }
 
-  private def writeDataToRows(staticData: ModelMap, repeatedData: Seq[ModelMap]): Int = {
+  def writeRepeatedData(data: Seq[DataRow]): Unit = {
+    val repeatedDataModelMaps: Seq[ModelMap] = data.map { dataRow =>
+      ModelMap(ExportModelUtils.REPEATED_FIELD_KEY, dataRow.getCells, schema)
+    }
+    outputRowIndex = writeDataToRows(repeatedData = repeatedDataModelMaps)
+  }
+
+  private def writeDataToRows(staticData: ModelMap = Map.empty, repeatedData: Seq[ModelMap] = Seq.empty): Int = {
     templateSheet.getRowIndices
-      .drop(templateIndex) // Append-Only Sheet Writer does not support writing data to previously written template rows
+      .drop(templateIndex)
       .foldLeft(outputRowIndex) { (writeRowIndex, templateRowIndex) =>
         templateSheet.rowOpt(templateRowIndex)
           .map { templateRow =>
-            val writeResult: RowWriteResult = writeDataToRow(templateRow, writeRowIndex, repeatedData, staticData)
+            val writeResult: RowWriteResult = writeDataToRow(
+              templateRow = templateRow,
+              writeRowIndex = writeRowIndex,
+              staticData = staticData,
+              repeatedData = repeatedData
+            )
             val nextWriteIndex = writeResult.writeIndex
             if (writeResult.shouldStopCurrentWrite) {
               return nextWriteIndex
@@ -75,9 +82,12 @@ class AppendOnlySheetWriter
       }
   }
 
-  case class RowWriteResult(writeIndex: Int, shouldStopCurrentWrite: Boolean)
+  private case class RowWriteResult(writeIndex: Int, shouldStopCurrentWrite: Boolean)
 
-  private def writeDataToRow(templateRow: Row, writeRowIndex: Int, repeatedData: Seq[ModelMap], staticData: ModelMap): RowWriteResult = {
+  private def writeDataToRow(templateRow: Row,
+                             writeRowIndex: Int,
+                             repeatedData: Seq[ModelMap] = Seq.empty,
+                             staticData: ModelMap = Map.empty): RowWriteResult = {
     if (templateRow.isRepeatedRow) {
       writeRepeatedDataToRow(templateRow, writeRowIndex, repeatedData, staticData)
     }
