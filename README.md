@@ -34,17 +34,29 @@ Add it as a dependency:
 
 ## How To Use
 
-To use Exscalabur to create Excel files, you first require an __Excel Template__ file. The Excel template contains formatting and layout but instead of data, there will be __keys__ in the cells where your data will be located.
+## Templates
+To use Exscalabur to create Excel files, you first require an __Excel Template__ file. 
+
+The Excel template contains formatting and layout but instead of data, there will be __keys__ in the cells where your data will be located. 
+
+Any cell styling/cell borders must be made to the template.
 
 An example of what a template sheet may look like:
 
 ![template](.readme_resources/template.png)
 
-This template has 6 **keys** for data substitution --`$KEY.fname`, `$KEY.lname`, `$REP.animal`, `$REP.weight`, `$KEY.conclusion`,and `$REP.element`.  A **key** is defined by having either a `$KEY.`, or `$REP.` prefix. If a row contains a cell with a `$REP.*` cell, it is considered a __repeated row__ -- one that will be repeated for every piece of data supplied. If a cell contains a `$KEY.`, a one-time substitution will be applied for data that is provided. Anything not a __key__ will be copied as is. 
+## Template Keys
+A template key is a cell with the value `$KEY.` or `$REP.` prefixed.
+A `$KEY.` cell will be substituted for a single piece of data.
+A `$REP.` cell will be substituted multiple times, creating a new row for each piece of data given.
 
-Any cell styling/cell borders must be made to the template.
+Cells that do not contain keys will be copied as is.
 
-The next thing required is a __schema definition__. This may be provided as a yaml file. The format of the Yaml file is as follows:
+In the above example, this template has 6 keys:`$KEY.fname`, `$KEY.lname`, `$REP.animal`, `$REP.weight`, `$KEY.conclusion`,and `$REP.element`.
+
+## Schema Definition
+### Yaml
+A schema definition is required, and may be provided as a YAML file with the below structure:
 
 ```yaml
 KEYNAME1:
@@ -56,11 +68,11 @@ KEYNAME2:
 # etc
 ```
 
-Where `KEYNAME` is a **key** as seen in the template sheet, `excelType` is the type of the cell in the final sheet, and `dataType`, is the type of the data that will be passed in.
+`KEYNAME` is the **key** exactly as seen in the template. 
+`excelType` is the type of the cell in the final sheet.
+`dataType` is the runtime type of the data to be substituted.
 
 A `YamlReader` class is provided to convert the yaml file into an in-code representation. 
-
-Alternatively, this **schema** may be provided in-code as a `Map[String, YamlEntry]`, where `YamlEntry` is a provided case class representing the above structure, and the map's keys represent the `KEYNAME`s of the above example.
 
 For the above template Excel file, the following may be an example of the `schema` definition:
 
@@ -90,7 +102,18 @@ $REP.element:
   excelType: "string"
 ```
 
-To pass data in to be substituted into a `$KEY.` template cell, an instance of a `DataCell(key: String, value: oneOf(String, Long, Double))` must be created, where the key represents a __key__ _without the `$KEY.` prefix_, and `value` is the value to substitute.
+### In-Code Map
+Alternatively, this **schema** may be provided in-code as a `Map[String, YamlEntry]`.
+The Map's keys are the `KEYNAME`s.
+`YamlEntry` is a provided case class representing the above YAML structure.  
+
+## Data Substitution
+
+### Single-Substitution Data
+
+To pass data in to be substituted into a `$KEY.` template cell, an instance of a `DataCell(key: String, value: oneOf(String, Long, Double))` must be created.
+`key` is the __key__ from the template, __without the `$KEY.` prefix__.
+`value` is the value to substitute. It's runtime type must match the schema definition.
 
 For example, in the above example, we may have `DataCell`s like:
 
@@ -100,23 +123,29 @@ DataCell("lname", "Person")
 DataCell("conclusion", "EXSCALABUR")
 ```
 
-To pass data in to be substituted into a repeated row, instances of `DataRow` are passed in, containing `DataCell`s for each cell in the repeated row.
+
+### Repeated Data Substitution
+To pass data to be substituted into a repeated row, instances of `DataRow` are passed in, containing `DataCell`s for each cell in the repeated row.
 
 For the example, our `DataRow` instances might look like:
 
 ```scala
 DataRow().addCell("animal", "monkey").addCell("weight", 12.1)
 DataRow().addCell("animal", "horse").addCell("weight", 12.2)
-DataRow.addCell("element", "hydrogen")
-DataRow.addCell("element", "helium")
-DataRow.addCell("element", "lithium")
+DataRow().addCell("element", "hydrogen")
+DataRow().addCell("element", "helium")
+DataRow().addCell("element", "lithium")
 ```
 
-Exscalabur supports performing writes in multiple steps. This can be done with multiple calls to `writeStaticData` and `writeRepeatedData`.
+## Writing
+
+Exscalabur supports multi-step writes. This can be done with multiple calls to `writeStaticData` and `writeRepeatedData`.
 
 Currently, Exscalabur only supports writing in an append-only manner. So, for the above example, the data for `$KEY.fname` must be provided before the data for $REP.animal is provided.
 
 There are plans for Exscalabur to support writing to rows out of order, but this has yet to be implemented.
+
+__Exscalabur does not support sub-tables arranged horizontally__
 
 Lastly, all that's left is to write the data. To do so, create an instance of a `Exscalabur` object:
 

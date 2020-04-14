@@ -84,6 +84,7 @@ commands:
             git config --global user.name 'R&D CI'
             git config --global user.email '<>'
             git commit -am "[ci skip] published exscalabur $(cat version.sbt | cut -d ' ' -f5) to cloudsmith"
+            git push
 
 jobs:
   tests:
