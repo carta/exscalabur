@@ -74,7 +74,7 @@ commands:
     steps:
       - add_ssh_keys:
             fingerprints:
-              - "94:e8:72:18:6b:fa:52:49:18:c4:16:56:be:62:01:26"
+              - "a3:6b:c5:78:ed:6c:19:14:77:13:c4:bd:42:84:77:54"
       - run:
           name: Publish to cloudsmith
           command: |
