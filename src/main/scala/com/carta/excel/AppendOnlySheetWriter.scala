@@ -52,6 +52,8 @@ class AppendOnlySheetWriter
     }
   }
 
+  def getOutputSheet: Sheet = this.outputSheet
+
   private def writeDataToRows(staticData: ModelMap, repeatedData: Seq[ModelMap]): Int = {
     templateSheet.getRowIndices
       .drop(templateIndex) // Append-Only Sheet Writer does not support writing data to previously written template rows
