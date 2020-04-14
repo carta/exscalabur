@@ -15,8 +15,8 @@ Add it as a dependency:
 
 ### Requirements
 
-- Java 12 or later
-- Scala 2.12.8
+- Java 11 or later
+- Scala 2.12 or later
 - [sbt](https://www.scala-sbt.org/1.x/docs/Setup.html) 1.2.8 or higher
 
 ### Common sbt Commands
@@ -30,15 +30,15 @@ Add it as a dependency:
 | `clean`     | Removes generated files from the target directory    |
 | `update`    | Updates external dependencies                        |
 | `package`   | Creates JAR                                          |
-| `publishLocal` | Publishes to local IVY repository, by default in `~/.ivy2/local`
+| `publishLocal` | Publishes to local IVY repository, by default in `~/.ivy2/local` |
 
 ## How To Use
 
-To use Exscalabur to create Excel files, you first require an __Excel Template__ file. This file is a bare-bones version of what the final Excel file will look like, but with special __keys__ specifying where data will be located.
+To use Exscalabur to create Excel files, you first require an __Excel Template__ file. The Excel template contains formatting and layout but instead of data, there will be __keys__ in the cells where your data will be located.
 
 An example of what a template sheet may look like:
 
-![template](/Users/katiedsouza/Developer/exscalabur/.readme_resources/template.png)
+![template](.readme_resources/template.png)
 
 This template has 6 **keys** for data substitution --`$KEY.fname`, `$KEY.lname`, `$REP.animal`, `$REP.weight`, `$KEY.conclusion`,and `$REP.element`.  A **key** is defined by having either a `$KEY.`, or `$REP.` prefix. If a row contains a cell with a `$REP.*` cell, it is considered a __repeated row__ -- one that will be repeated for every piece of data supplied. If a cell contains a `$KEY.`, a one-time substitution will be applied for data that is provided. Anything not a __key__ will be copied as is. 
 
@@ -58,7 +58,7 @@ KEYNAME2:
 
 Where `KEYNAME` is a **key** as seen in the template sheet, `excelType` is the type of the cell in the final sheet, and `dataType`, is the type of the data that will be passed in.
 
-A  `YamlReader` class is provided to convert the yaml file into an in-code representation. 
+A `YamlReader` class is provided to convert the yaml file into an in-code representation. 
 
 Alternatively, this **schema** may be provided in-code as a `Map[String, YamlEntry]`, where `YamlEntry` is a provided case class representing the above structure, and the map's keys represent the `KEYNAME`s of the above example.
 
@@ -100,21 +100,21 @@ DataCell("lname", "Person")
 DataCell("conclusion", "EXSCALABUR")
 ```
 
-To pass data in to be substituted into a repeated row, instances of `DataRow` are passed in, containing `DataCell`s for each cell in the repeated row. A `Builder` is provided to construct these instances.
+To pass data in to be substituted into a repeated row, instances of `DataRow` are passed in, containing `DataCell`s for each cell in the repeated row.
 
 For the example, our `DataRow` instances might look like:
 
 ```scala
-DataRow.Builder().addCell("animal", "monkey").addCell("weight", 12.1).build()
-DataRow.Builder().addCell("animal", "horse").addCell("weight", 12.2).build()
-DataRow.Builder().addCell("element", "hydrogen").build()
-DataRow.Builder().addCell("element", "helium").build()
-DataRow.Builder().addCell("element", "lithium").build()
+DataRow().addCell("animal", "monkey").addCell("weight", 12.1)
+DataRow().addCell("animal", "horse").addCell("weight", 12.2)
+DataRow.addCell("element", "hydrogen")
+DataRow.addCell("element", "helium")
+DataRow.addCell("element", "lithium")
 ```
 
-Exscalabur supports performing writes in multiple steps. So, data that is to be written is supplied, wrapped in a `Iterator[(List[DataCell], List[DataRow])]`. As such, the data for `$REP.animal` may be provided in multiple (sequential) elements of this `Iterator`.
+Exscalabur supports performing writes in multiple steps. This can be done with multiple calls to `writeStaticData` and `writeRepeatedData`.
 
-Currently, Exscalabur only supports writing in an append-only manner. So, for the above example, the data for `$KEY.fname` cannot be provided any later than the first set of data provided  for `$REP.animal`.
+Currently, Exscalabur only supports writing in an append-only manner. So, for the above example, the data for `$KEY.fname` must be provided before the data for $REP.animal is provided.
 
 There are plans for Exscalabur to support writing to rows out of order, but this has yet to be implemented.
 
@@ -123,22 +123,24 @@ Lastly, all that's left is to write the data. To do so, create an instance of a 
 ```scala
 Exscalabur(
   templates, // Iterable[String], representing paths to the template sheets
-  "/home/my_user/out.xlsx", // output file path
-  yamlData, // The in-code schema representation explained above
+  schema, // The in-code schema representation explained above
   windowSize // number of rows in the output workbook to keep in memory at a time
 )
 ```
 
-For every sheet to be written to, create a `SheetWriter`: 
+For every sheet to be written to, create a `SheetWriter`:
 
 ```scala
 exscalabur.getAppendOnlySheetWriter(sheetName) // sheetName is as defined in the template sheet.
 ```
+Note, the `sheetName` used here __must match the template exactly__
 
-Write data: `sheetWriter.writeData(dataProvider: Iterable[(List[DataCell], List[DataRow])])`
+Write static data: `sheetWriter.writeStaticData(staticData: Seq[DataCell])`
 
-And write to the output file: `exscalabur.writeToDisk()`
+and to write repeated data: `sheetWriter.writeRepeatedData(repeatedData: Seq[DataRow])`
+
+And write to the output file: `exscalabur.exportToFile(outputPath)`
 
 Doing so results in the final output sheet:
 
-![output](/Users/katiedsouza/Developer/exscalabur/.readme_resources/output.png)
+![output](.readme_resources/output.png)
