@@ -3,7 +3,7 @@
 [![Latest Version @ Cloudsmith](https://api-prd.cloudsmith.io/badges/version/carta/maven-releases/maven/exscalabur_2.12/latest/xg=com.carta/?render=true&badge_token=gAAAAABePJwL9tZMOa6DrXC6N_iGkYROA2I1jTSwarIRvAuhy7O34Tt742-doost6rUHEs5WR2PqRoxjGCihc1v0mCeHIeVY_hSi6-wyPttrjUAFaGPmXMU%3D)](https://cloudsmith.io/~carta/repos/maven-releases/packages/detail/maven/exscalabur_2.12/latest/xg=com.carta/)
 
 # Exscalabur
-Exscalabur is a Scala library for creating Excel files from data and a template. Exscalabur takes the burden of in-code sheet formatting back to Excel natively -- empowering product managers, designers, and other non-developers.
+Exscalabur is a Scala library for creating Excel files from data and a template. Exscalabur allows excel layout and formatting to be specified by excel templates, allowing anyone with basic excel knowledge to design and modify templates.
 
 ## Usage
 
@@ -36,18 +36,18 @@ Add it as a dependency:
 ## Templates
 To use Exscalabur to create Excel files, you first require an __Excel Template__ file. 
 
-The Excel template contains formatting and layout but instead of data, there will be __keys__ in the cells where your data will be located. 
+The Excel template contains formatting and layout but instead of data, there are __keys__ in the cells that indicate where the data will be injected.
 
-Any cell styling/cell borders must be made to the template.
+Any cell styling/cell borders made to the template will appear in the generated excel file.
 
-An example of what a template sheet may look like:
+An example template sheet:
 
 ![template](.readme_resources/template.png)
 
 ## Template Keys
-A template key is a cell with the value `$KEY.` or `$REP.` prefixed.
-A `$KEY.` cell will be substituted for a single piece of data.
-A `$REP.` cell will be substituted multiple times, creating a new row for each piece of data given.
+A template key is a cell with the value prefixed by `$KEY.` or `$REP.`
+* A `$KEY.` cell will be substituted for a single piece of data.
+* A `$REP.` cell will be repeated with formatting for each row of data provided.
 
 Cells that do not contain keys will be copied as is.
 
@@ -55,7 +55,7 @@ In the above example, this template has 6 keys:`$KEY.fname`, `$KEY.lname`, `$REP
 
 ## Schema Definition
 ### Yaml
-A schema definition is required, and may be provided as a YAML file with the below structure:
+A schema definition is required, and may be provided as a YAML file with the structure:
 
 ```yaml
 KEYNAME1:
@@ -67,15 +67,13 @@ KEYNAME2:
 # etc
 ```
 
-`KEYNAME` is the **key** exactly as seen in the template. 
-`excelType` is the type of the cell in the final sheet.
-`dataType` is the runtime type of the data to be substituted.
+* `KEYNAME` is the **key** exactly as seen in the template.
+* `dataType` is the runtime type of the data provided to exscalabur. 
+* `excelType` is the type of the cell in the final sheet.
 
-A `YamlReader` class is provided to convert the yaml file into an in-code representation. 
+`com.carta.yaml.YamlReader` is provided to read the schema definition yaml files. 
 
-The `YamlReader` can be imported from `com.carta.yaml.YamlReader`
-
-For the above template Excel file, the following may be an example of the `schema` definition:
+For the example template Excel file above, the following is valid `schema` definition:
 
 ```yaml
 $KEY.fname:
@@ -106,9 +104,7 @@ $REP.element:
 ### In-Code Map
 Alternatively, this **schema** may be provided in-code as a `Map[String, YamlEntry]`.
 The Map's keys are the `KEYNAME`s.
-`YamlEntry` is a provided case class representing the above YAML structure.  
-
-`YamlEntry` can be imported using: `import com.carta.yaml.YamlEntry`
+`import com.carta.yaml.YamlEntry` is a provided case class representing the above YAML structure.  
 
 ## Data Substitution
 
@@ -118,7 +114,7 @@ To pass data in to be substituted into a `$KEY.` template cell, an instance of a
 `key` is the __key__ from the template, __without the `$KEY.` prefix__.
 `value` is the value to substitute. It's runtime type must match the schema definition.
 
-For example, in the above example, we may have `DataCell`s like:
+For the above example, we may have `DataCell`s like:
 
 ```Scala
 import com.carta.exscalabur.DataCell
