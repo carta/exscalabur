@@ -72,9 +72,6 @@ commands:
       cloudsmith-repo:
         type: string
     steps:
-      - add_ssh_keys:
-            fingerprints:
-              - "a3:6b:c5:78:ed:6c:19:14:77:13:c4:bd:42:84:77:54"
       - run:
           name: Publish to cloudsmith
           command: |
