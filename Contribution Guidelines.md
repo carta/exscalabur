@@ -4,7 +4,7 @@
 Developers and other community members must interact with each other in a manner described by Exscalabur's Code of Conduct.
 
 ## Development Process
-Exscalabur's development is done through a benevolent dictatorship system. This means that all commits made to Exscalabur will be made with the best interest of the community in mind, and that only members of Carta's leadership are authorized to approve/reject patches submitted. Community members may voice their opinions, but the right to a final say is reserved to Carta's Exscalabur leaders.
+Exscalabur's development is done through a benevolent dictatorship system. This means that all commits made to Exscalabur will be made with the best interest of the community in mind, and that only members of Carta's leadership are authorized to approve/reject patches submitted. Community members may voice their opinions, but the right to a final say is reserved to members of Exscalabur's leadership.
 
 These leaders are the following:
 - Jesse Baer-Hennig
