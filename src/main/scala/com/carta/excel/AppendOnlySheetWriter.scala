@@ -212,7 +212,7 @@ class AppendOnlySheetWriter
 
   private def substituteString(templateCell: Cell, outputCell: Cell, substitutionMap: ModelMap): Unit = {
     val templateValue = templateCell.getStringCellValue
-    substitutionMap.get(templateValue).foreach {
+    substitutionMap.getOrElse(templateValue, CellBlank()) match {
       case CellDouble(double: Double) => outputCell.setCellValue(double)
       case CellDate(date: Date) => outputCell.setCellValue(date)
       case CellString(string: String) => outputCell.setCellValue(string)
@@ -221,11 +221,18 @@ class AppendOnlySheetWriter
     }
   }
 
-  private def shouldSkipRow(templateRow: Row, modelMap: ModelMap*): Boolean = {
-    !templateRow.cellIterator().asScala
+  private def shouldSkipRow(templateRow: Row, modelMaps: ModelMap*): Boolean = {
+    val substituteCells = templateRow.cellIterator().asScala
       .filter(isSubstituteCell)
-      .map(_.getStringCellValue)
-      .forall(cellValue => modelMap.exists(modelMap => modelMap.contains(cellValue)))
+      .toList
+
+    if (substituteCells.isEmpty) {
+      false
+    }
+    else {
+      !substituteCells.map(_.getStringCellValue)
+        .exists(cellValue => modelMaps.exists(modelMap => modelMap.contains(cellValue)))
+    }
   }
 }
 

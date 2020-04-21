@@ -899,6 +899,64 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     ExcelTestHelpers.assertEqualsWorkbooks(expectedInputStream, actualInputStream)
   }
 
+  "SheetWriter" should "Put a blank if a data row in repeated section is missing a field" in {
+    val templateName = "substitutionExtraKeys"
+    val outputWorkbook = new SXSSFWorkbook(100)
+    val templateStream = new ByteArrayOutputStream()
+    val expectedStream = new ByteArrayOutputStream()
+    val actualStream = new ByteArrayOutputStream()
+
+    val schema = Map(
+      "$REP.string_field" -> YamlEntry(DataType.string, ExcelType.string),
+      "$REP.long_field" -> YamlEntry(DataType.long, ExcelType.number),
+      "$REP.double_field" -> YamlEntry(DataType.double, ExcelType.number),
+    )
+
+    val modelSeq: Iterable[(String, CellValue)] = getModelSeq(RepTemplateModel(Some("test"), Some(1234), Some(1234)))
+    val modelSeqMissingData: Iterable[(String, CellValue)] = getModelSeq(
+      RepTemplateModel(None, Some(1234), Some(1234)),
+      shouldInsertBlanks = true
+    )
+
+    val templateRows = Seq(
+      // Row with static text, empty cell, and number
+      Seq(
+        (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("text")),
+        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1234)),
+      ),
+
+      // 1 Row with repeated field keys
+      modelSeq.head
+    )
+
+    val expectedRows = Seq(
+      Seq(
+        (ExcelTestHelpers.STATIC_TEXT_KEY, CellString("text")),
+        (ExcelTestHelpers.STATIC_NUMBER_KEY, CellDouble(1234))
+      ),
+    ) ++ Seq(modelSeq, modelSeq, modelSeqMissingData, modelSeq, modelSeq)
+
+    val templateBook = ExcelTestHelpers.generateTestWorkbook(templateName, templateRows, insertRowModelKeys = true)
+    templateBook.write(templateStream)
+    ExcelTestHelpers.generateTestWorkbook(templateName, expectedRows)
+      .write(expectedStream)
+
+    val data = Vector(
+      DataRow().addCell("string_field", "test").addCell("long_field", 1234).addCell("double_field", 1234.0),
+      DataRow().addCell("string_field", "test").addCell("long_field", 1234).addCell("double_field", 1234.0),
+      DataRow().addCell("long_field", 1234).addCell("double_field", 1234.0),
+      DataRow().addCell("string_field", "test").addCell("long_field", 1234).addCell("double_field", 1234.0),
+      DataRow().addCell("string_field", "test").addCell("long_field", 1234).addCell("double_field", 1234.0),
+    )
+
+    val sheetWriter = AppendOnlySheetWriter(templateBook.getSheet(templateName), outputWorkbook, schema, mutable.Map.empty)
+    sheetWriter.writeRepeatedData(data)
+    outputWorkbook.write(actualStream)
+    val expectedInputStream = new ByteArrayInputStream(expectedStream.toByteArray)
+    val actualInputStream = new ByteArrayInputStream(actualStream.toByteArray)
+    ExcelTestHelpers.assertEqualsWorkbooks(expectedInputStream, actualInputStream)
+  }
+
   private def getRandomCell(templateWorkbook: XSSFWorkbook, row: XSSFRow, index: Int): XSSFCell = {
     val style = ExcelTestHelpers.randomCellStyle(templateWorkbook)
     val cell = row.createCell(index)
