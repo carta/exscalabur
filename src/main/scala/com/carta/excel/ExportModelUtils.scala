@@ -45,9 +45,11 @@ object ExportModelUtils {
     CellDate(Date.from(date.atStartOfDay(systemTimeZone).toInstant))
   }
 
-  def toCellDateFromLong(epochMillis: Number): CellDate =
+  def toCellDateFromLong(epochMillis: Number): CellDate = {
     CellDate(Date.from(Instant.ofEpochMilli(epochMillis.longValue)))
+  }
 
-  def toCellDateFromTimestampMillis(epochMillis: Long, offsetSeconds: Long = 0): CellDate =
+  def toCellDateFromTimestampMillis(epochMillis: Long, offsetSeconds: Long = 0): CellDate = {
     CellDate(new Date(epochMillis + offsetSeconds * 1000))
+  }
 }
