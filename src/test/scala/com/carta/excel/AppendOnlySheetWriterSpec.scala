@@ -926,7 +926,7 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
       ),
 
       // 1 Row with repeated field keys
-      modelSeq.head
+      getModelSeq(RepTemplateModel(Some("text"), Some(1234), Some(1234)))
     )
 
     val expectedRows = Seq(
