@@ -116,19 +116,32 @@ object ExcelTestHelpers extends Matchers {
     modelSeqBuilder.result
   }
 
-  def getModelSeq(r: RepTemplateModel): Iterable[(String, CellValue)] = {
+  def getModelSeq(r: RepTemplateModel): Iterable[(String, CellValue)] = getModelSeq(
+    r, shouldInsertBlanks = false
+  )
+
+  def getModelSeq(r: RepTemplateModel, shouldInsertBlanks: Boolean): Iterable[(String, CellValue)] = {
     val modelSeqBuilder = List.newBuilder[(String, CellValue)]
     if (r.stringField.isDefined) {
       val cellString = ExportModelUtils.toCellStringFromString(r.stringField.get)
       modelSeqBuilder += ((s"${ExportModelUtils.REPEATED_FIELD_KEY}.string_field", cellString))
     }
+    else if (shouldInsertBlanks) {
+      modelSeqBuilder += ((s"${ExportModelUtils.REPEATED_FIELD_KEY}.string_field", CellBlank()))
+    }
     if (r.doubleField.isDefined) {
       val cellDouble = ExportModelUtils.toCellDoubleFromDouble(r.doubleField.get)
       modelSeqBuilder += ((s"${ExportModelUtils.REPEATED_FIELD_KEY}.long_field", cellDouble))
     }
+    else if (shouldInsertBlanks) {
+      modelSeqBuilder += ((s"${ExportModelUtils.REPEATED_FIELD_KEY}.long_field", CellBlank()))
+    }
     if (r.longField.isDefined) {
       val cellLong = ExportModelUtils.toCellDoubleFromLong(r.longField.get)
       modelSeqBuilder += ((s"${ExportModelUtils.REPEATED_FIELD_KEY}.double_field", cellLong))
+    }
+    else if (shouldInsertBlanks) {
+      modelSeqBuilder += ((s"${ExportModelUtils.REPEATED_FIELD_KEY}.double_field", CellBlank()))
     }
 
     modelSeqBuilder.result
