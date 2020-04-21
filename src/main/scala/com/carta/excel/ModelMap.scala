@@ -14,13 +14,13 @@ package com.carta.excel
 
 import com.carta.excel.ExportModelUtils.ModelMap
 import com.carta.exscalabur
-import com.carta.exscalabur.DataCell
+import com.carta.exscalabur.{DataCell, DateCellType}
 import com.carta.yaml.{DataType, ExcelType, YamlEntry}
 
 object ModelMap {
   def apply(keyType: String, dataRow: Iterable[DataCell], schema: Map[String, YamlEntry]): ModelMap = {
 
-    dataRow.map(_.asTuple).map { case (key: String, cellValue: exscalabur.CellType) =>
+    dataRow.map { case DataCell(key: String, cellValue: exscalabur.CellType) =>
       val newKey = s"${keyType}.$key"
       val newValue = schema.get(newKey).map {
         case YamlEntry(_, ExcelType.string) =>
@@ -29,14 +29,17 @@ object ModelMap {
           ExportModelUtils.toCellDoubleFromString(cellValue.getValueAsString)
         case YamlEntry(_, ExcelType.number) =>
           ExportModelUtils.toCellDouble(cellValue.getValueAsNumber)
+        case YamlEntry(DataType.date, ExcelType.date) if cellValue.isInstanceOf[DateCellType] =>
+          val dateCellValue = cellValue.asInstanceOf[DateCellType]
+          ExportModelUtils.toCellDate(dateCellValue.date, dateCellValue.zoneId)
+        case YamlEntry(DataType.long, ExcelType.date) =>
+          ExportModelUtils.toCellDateFromLong(cellValue.getValueAsNumber)
         case YamlEntry(DataType.string, ExcelType.date) =>
           // TODO
           CellBlank()
         case YamlEntry(DataType.double, ExcelType.date) =>
           // TODO
           CellBlank()
-        case YamlEntry(DataType.long, ExcelType.date) =>
-          ExportModelUtils.toCellDateFromLong(cellValue.getValueAsNumber)
       }.getOrElse(CellBlank())
       newKey -> newValue
     }.toMap

@@ -1,5 +1,7 @@
 package com.carta.excel
 
+import java.time.LocalDate
+
 import com.carta.exscalabur.DataCell
 import com.carta.yaml.{DataType, ExcelType, YamlEntry}
 import org.scalatest.flatspec.AnyFlatSpec
@@ -24,6 +26,16 @@ class ModelMapSpec extends AnyFlatSpec with Matchers {
     modelMap.values.foreach(cellValue => assert(cellValue.isInstanceOf[CellBlank]))
   }
 
+  "ModelMap" should "produce date cell" in {
+    val keyType = "$REP"
+    val dataRow = List(DataCell("date", LocalDate.ofYearDay(2020, 145)))
+    val schema = Map(
+      "$REP.date" -> YamlEntry(DataType.date, ExcelType.date)
+    )
+
+    val modelMap = ModelMap(keyType, dataRow, schema)
+    modelMap.values.foreach(cellValue => assert(cellValue.isInstanceOf[CellDate]))
+  }
   List(("test", DataType.string), (1L, DataType.long), (1.5, DataType.double)).foreach { case (value, dataType) =>
     "ModelMap" should f"produce a string cell excel type is string for dataType $dataType" in {
       val keyType = "$REP"

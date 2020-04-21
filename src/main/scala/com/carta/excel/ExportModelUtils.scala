@@ -12,7 +12,7 @@
  */
 package com.carta.excel
 
-import java.time.Instant
+import java.time.{Instant, LocalDate, ZoneId}
 import java.util.Date
 import scala.util.control.Exception.allCatch
 
@@ -41,11 +41,15 @@ object ExportModelUtils {
 
   def toCellDoubleFromLong(long: Long): CellValue = CellDouble(long.toDouble)
 
-  // to CellDate Option converters
-  def toCellDateFromLong(epochMillis: Number): CellDate =
-  // epochMillis * hours * minutes * seconds * milliseconds
-    CellDate(Date.from(Instant.ofEpochMilli(epochMillis.longValue * 24 * 60 * 60 * 1000)))
+  def toCellDate(date: LocalDate, systemTimeZone: ZoneId = ZoneId.systemDefault()): CellValue = {
+    CellDate(Date.from(date.atStartOfDay(systemTimeZone).toInstant))
+  }
 
-  def toCellDateFromTimestampMillis(epochMillis: Long, offsetSeconds: Long = 0): CellDate =
+  def toCellDateFromLong(epochMillis: Number): CellDate = {
+    CellDate(Date.from(Instant.ofEpochMilli(epochMillis.longValue)))
+  }
+
+  def toCellDateFromTimestampMillis(epochMillis: Long, offsetSeconds: Long = 0): CellDate = {
     CellDate(new Date(epochMillis + offsetSeconds * 1000))
+  }
 }
