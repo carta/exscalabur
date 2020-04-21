@@ -16,7 +16,7 @@ import com.fasterxml.jackson.core.`type`.TypeReference
 
 object DataType extends Enumeration {
   type DataCellType = Value
-  val string, double, long = Value
+  val string, double, long, date = Value
 }
 
 class DataTypeReference extends TypeReference[DataType.type]

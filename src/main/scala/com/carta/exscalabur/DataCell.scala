@@ -12,6 +12,8 @@
  */
 package com.carta.exscalabur
 
+import java.time.{LocalDate, ZoneId}
+
 case class DataCell(key: String, value: CellType) {
   def asTuple: (String, CellType) = key -> value
 }
@@ -20,4 +22,8 @@ object DataCell {
   def apply(key: String, value: String): DataCell = apply(key, StringCellType(value))
   def apply(key: String, value: Long): DataCell = apply(key, LongCellType(value))
   def apply(key: String, value: Double): DataCell = apply(key, DoubleCellType(value))
+
+  def apply(key: String, date: LocalDate, zoneId: ZoneId = ZoneId.systemDefault()): DataCell = {
+    new DataCell(key, DateCellType(date, zoneId))
+  }
 }

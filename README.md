@@ -59,7 +59,7 @@ A schema definition is required, and may be provided as a YAML file with the str
 
 ```yaml
 KEYNAME1:
-  dataType: oneOf("string", "double", "long")
+  dataType: oneOf("string", "double", "long", "date")
   excelType: oneOf("string", "number", "date")
 KEYNAME2:
   dataType: oneOf("string", "double", "long")

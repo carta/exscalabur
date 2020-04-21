@@ -12,6 +12,8 @@
  */
 package com.carta.exscalabur
 
+import java.time.{LocalDate, ZoneId}
+
 sealed trait CellType {
   def getValueAsString: String
   def getValueAsNumber: Number
@@ -32,4 +34,10 @@ final case class DoubleCellType(value: Double) extends CellType {
 final case class LongCellType(value: Long) extends CellType {
   override def getValueAsString: String = value.toString
   override def getValueAsNumber: Number = value
+}
+
+final case class DateCellType(date: LocalDate, zoneId: ZoneId) extends CellType {
+  override def getValueAsString: String = date.atStartOfDay(zoneId).toString
+
+  override def getValueAsNumber: Number = date.atStartOfDay(zoneId).toInstant.toEpochMilli
 }
