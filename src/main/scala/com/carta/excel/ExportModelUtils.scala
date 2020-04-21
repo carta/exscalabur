@@ -44,7 +44,7 @@ object ExportModelUtils {
   // to CellDate Option converters
   def toCellDateFromLong(epochMillis: Number): CellDate =
   // epochMillis * hours * minutes * seconds * milliseconds
-    CellDate(Date.from(Instant.ofEpochMilli(epochMillis.longValue * 24 * 60 * 60 * 1000)))
+    CellDate(Date.from(Instant.ofEpochMilli(epochMillis.longValue)))
 
   def toCellDateFromTimestampMillis(epochMillis: Long, offsetSeconds: Long = 0): CellDate =
     CellDate(new Date(epochMillis + offsetSeconds * 1000))
