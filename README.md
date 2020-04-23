@@ -177,3 +177,10 @@ And write to the output file: `exscalabur.exportToFile(outputPath)`
 Doing so results in the final output sheet:
 
 ![output](.readme_resources/output.png)
+
+# Supported Cell Types
+Currently, Exscalabur supports copying cells containing numeric, boolean, and string values. 
+Cells containing formulas and formula errors will not copied from the template to the output sheet.
+
+# Roadmap
+* Add support for Exscalabur to copy formulas on single-substitution template cells.
