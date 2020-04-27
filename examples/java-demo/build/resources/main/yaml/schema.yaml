@@ -1,0 +1,23 @@
+$KEY.project:
+  dataType: "string"
+  excelType: "string"
+
+$REP.person:
+  dataType: "string"
+  excelType: "string"
+
+$REP.gpa:
+  dataType: "double"
+  excelType: "number"
+
+$REP.major:
+  dataType: "string"
+  excelType: "string"
+
+$REP.school:
+  dataType: "string"
+  excelType: "string"
+
+$REP.numStudents:
+  dataType: "long"
+  excelType: "number"
