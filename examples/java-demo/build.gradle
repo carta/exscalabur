@@ -7,9 +7,7 @@ version '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
-    maven {
-        url "${System.properties['user.home']}/.ivy2/local"
-    }
+    mavenLocal()
 }
 
 dependencies {

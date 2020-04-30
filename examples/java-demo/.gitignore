@@ -3,4 +3,4 @@
 ./gradlew
 ./gradlew.bat
 ./out.xlsx
-./build/
+./build/**
