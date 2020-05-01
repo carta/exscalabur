@@ -7,15 +7,14 @@ import com.carta.yaml.YamlEntry
 
 import scala.collection.JavaConverters._
 
-class Exscalabur(templatePaths: java.util.List[String],
-                 schema: java.util.Map[String, YamlEntry],
-                 windowSize: Int) {
-
-  private val scalaExscalabur = com.carta.exscalabur.Exscalabur(
-    templatePaths.asScala,
-    schema.asScala.toMap,
-    windowSize
-  )
+class Exscalabur(scalaExscalabur: com.carta.exscalabur.Exscalabur) {
+  def this(templatePaths: java.util.List[String],
+           schema: java.util.Map[String, YamlEntry],
+           windowSize: Int) = {
+    this(
+      scalaExscalabur = com.carta.exscalabur.Exscalabur(templatePaths.asScala, schema.asScala.toMap, windowSize)
+    )
+  }
 
   def getAppendOnlySheetWriter(sheetName: String): AppendOnlySheetWriter = {
     val scalaSheetWriter = scalaExscalabur.getAppendOnlySheetWriter(sheetName)
