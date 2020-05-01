@@ -9,6 +9,7 @@ import com.carta.yaml.YamlEntry;
 import org.apache.commons.compress.utils.Lists;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -31,19 +32,38 @@ class App {
 
         final Exscalabur sword = new Exscalabur(templates, schemaDefinition, 100);
 
+        final List<String> names = Arrays.asList("Jon Somebody", "Jane Person", "Frank LastName", "Sarah Fakename", "Tim Tom");
+        final List<Double> gpa = Arrays.asList(3.8, 4.2, 4.1, 3.9, 3.9);
+        final List<String> major = Arrays.asList("CS", "Engineering", "Arts", "Science", "Engineering");
+
         final List<DataRow> peopleData1 = Lists.newArrayList();
-        peopleData1.add(new DataRow().addCell("person", "Jon Somebody").addCell("gpa", 3.8).addCell("major", "CS"));
-        peopleData1.add(new DataRow().addCell("person", "Jane Person").addCell("gpa", 4.2).addCell("major", "Engineering"));
-        peopleData1.add(new DataRow().addCell("person", "Frank LastName").addCell("gpa", 4.1).addCell("major", "Arts"));
-
         final List<DataRow> peopleData2 = Lists.newArrayList();
-        peopleData2.add(new DataRow().addCell("person", "Sarah Fakename").addCell("gpa", 3.9).addCell("major", "Science"));
-        peopleData2.add(new DataRow().addCell("person", "Tim Tom").addCell("gpa", 3.9).addCell("major", "Engineering"));
 
+        for (int i = 0; i < 3; i++) {
+            DataRow row = new DataRow();
+            row.addCell("person", names.get(i));
+            row.addCell("gpa", gpa.get(i));
+            row.addCell("major", major.get(i));
+            peopleData1.add(row);
+        }
+
+        for (int i = 3; i < 5; i++) {
+            DataRow row = new DataRow();
+            row.addCell("person", names.get(i));
+            row.addCell("gpa", gpa.get(i));
+            row.addCell("major", major.get(i));
+            peopleData2.add(row);
+        }
+
+        final List<String> schoolNames = Arrays.asList("School Name", "University of Place", "Well Known School");
+        final List<Long> numStudents = Arrays.asList(43_000L, 25_000L, 30_000L);
         final List<DataRow> schoolData = Lists.newArrayList();
-        schoolData.add(new DataRow().addCell("school", "School Name").addCell("numStudents", 43000));
-        schoolData.add(new DataRow().addCell("school", "University of Place").addCell("numStudents", 25000));
-        schoolData.add(new DataRow().addCell("school", "Well Known School").addCell("numStudents", 30000));
+        for (int i = 0; i < schoolNames.size(); i++) {
+            DataRow row = new DataRow();
+            row.addCell("school", schoolNames.get(i));
+            row.addCell("numStudents", numStudents.get(i));
+            schoolData.add(row);
+        }
 
         final List<DataCell> staticData = Lists.newArrayList();
         staticData.add(new DataCell("project", "exscalabur demo"));
