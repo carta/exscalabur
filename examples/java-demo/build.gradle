@@ -1,0 +1,15 @@
+plugins {
+    id 'java'
+}
+
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+    compile group: 'com.carta', name: 'exscalabur_2.12', version: '0.0.12'
+}
