@@ -32,12 +32,15 @@ class AppendOnlySheetWriter
  outputWorkbook: Workbook,
  schema: Map[String, YamlEntry],
  cellStyleCache: mutable.Map[CellStyle, Int]) {
+  private var numRowsCreated = 0
   private var outputRowIndex: Int = templateSheet.getFirstRowNum
   private var templateIndex: Int = templateSheet.getFirstRowNum
   private val outputSheet: Sheet = outputWorkbook.createSheet(templateSheet.getSheetName)
 
   private val repeatedRowsWithPartialWrittenData = mutable.Set.empty[Int]
 
+
+  private val cellFormulaParser = new CellFormulaParser()
   def copyPictures(): Unit = {
     templateSheet.getPictures.foreach(outputSheet.copyPicture)
   }
@@ -76,6 +79,7 @@ class AppendOnlySheetWriter
           }
           .getOrElse {
             outputSheet.createRow(writeRowIndex)
+            numRowsCreated += 1
             templateIndex = templateRowIndex + 1
             writeRowIndex + 1
           }
@@ -154,6 +158,7 @@ class AppendOnlySheetWriter
   private def createRow(templateRow: Row, modelMap: ModelMap, writeIndex: Int): Unit = {
     val outputRow = outputSheet.createRow(writeIndex)
     populateRowFromTemplate(templateRow, outputRow, templateSheet, outputSheet, modelMap)
+    numRowsCreated += 1
   }
 
   private def populateRowFromTemplate(templateRow: Row,
@@ -205,6 +210,10 @@ class AppendOnlySheetWriter
         substituteString(templateCell, outputCell, substitutionMap)
       case CellType.STRING =>
         outputCell.setCellValue(templateCell.getStringCellValue)
+      case CellType.FORMULA =>
+        val cellRefShiftFactor = numRowsCreated - templateCell.getRowIndex
+        val outputFormula = cellFormulaParser.shiftRowNums(templateCell.getCellFormula, cellRefShiftFactor)
+        outputCell.setCellFormula(outputFormula)
       case _ =>
       //logger.trace("CellType is one of {CellType.ERROR, CellType.BLANK, CellType.FORMULA, CellType.NONE} which we do not want to copy from")
     }
