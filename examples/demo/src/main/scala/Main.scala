@@ -43,13 +43,21 @@ object Main {
       DataRow().addCell("school", "Well Known School").addCell("numStudents", 30000)
     )
 
-    val staticData = List(DataCell("project", "exscalabur demo"))
+    val staticData1 = List(DataCell("project", "exscalabur demo"))
+
+    val staticData2 = List(
+      DataCell("value1", 12.34),
+      DataCell("value2", 11.35),
+      DataCell("value3", 14.50),
+    )
     val sheetWriter = sword.getAppendOnlySheetWriter("Sheet1")
 
-    sheetWriter.writeStaticData(staticData)
+    sheetWriter.writeStaticData(staticData1)
     sheetWriter.writeRepeatedData(peopleData1)
     sheetWriter.writeRepeatedData(peopleData2)
     sheetWriter.writeRepeatedData(schoolData)
+    sheetWriter.writeStaticData(staticData2)
+
 
     sword.exportToFile("./out.xlsx")
   }

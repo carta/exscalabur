@@ -68,6 +68,10 @@ class App {
         final List<DataCell> staticData = Lists.newArrayList();
         staticData.add(new DataCell("project", "exscalabur demo"));
 
+        final List<DataCell> staticData2 = Lists.newArrayList();
+        staticData2.add(new DataCell("value1", 12.34));
+        staticData2.add(new DataCell("value2", 11.35));
+        staticData2.add(new DataCell("value3", 14.50));
 
         final AppendOnlySheetWriter sheetWriter = sword.getAppendOnlySheetWriter("Sheet1");
 
@@ -75,6 +79,7 @@ class App {
         sheetWriter.writeRepeatedData(peopleData1);
         sheetWriter.writeRepeatedData(peopleData2);
         sheetWriter.writeRepeatedData(schoolData);
+        sheetWriter.writeStaticData(staticData2);
 
         sword.exportToFile("./out.xlsx");
     }
