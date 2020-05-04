@@ -31,16 +31,15 @@ class AppendOnlySheetWriter
 (templateSheet: XSSFSheet,
  outputWorkbook: Workbook,
  schema: Map[String, YamlEntry],
- cellStyleCache: mutable.Map[CellStyle, Int]) {
+ cellStyleCache: mutable.Map[CellStyle, Int],
+ cellFormulaParser: CellFormulaParser,
+) {
   private var numRowsCreated = 0
   private var outputRowIndex: Int = templateSheet.getFirstRowNum
   private var templateIndex: Int = templateSheet.getFirstRowNum
   private val outputSheet: Sheet = outputWorkbook.createSheet(templateSheet.getSheetName)
 
   private val repeatedRowsWithPartialWrittenData = mutable.Set.empty[Int]
-
-
-  private val cellFormulaParser = new CellFormulaParser()
   def copyPictures(): Unit = {
     templateSheet.getPictures.foreach(outputSheet.copyPicture)
   }
@@ -247,7 +246,13 @@ class AppendOnlySheetWriter
 
 object AppendOnlySheetWriter {
   def apply(templateSheet: XSSFSheet, outputWorkbook: SXSSFWorkbook, schema: Map[String, YamlEntry], cellStyleCache: mutable.Map[CellStyle, Int]): AppendOnlySheetWriter = {
-    val sheetWriter = new AppendOnlySheetWriter(templateSheet, outputWorkbook, schema, cellStyleCache)
+    val sheetWriter = new AppendOnlySheetWriter(
+      templateSheet = templateSheet,
+      outputWorkbook = outputWorkbook,
+      schema = schema,
+      cellStyleCache = cellStyleCache,
+      cellFormulaParser = new CellFormulaParser
+    )
     sheetWriter.initialWrite()
     sheetWriter
   }

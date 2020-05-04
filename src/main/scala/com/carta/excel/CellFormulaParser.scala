@@ -2,7 +2,7 @@ package com.carta.excel
 
 import scala.util.matching.Regex
 
-protected class CellFormulaParser {
+class CellFormulaParser {
   val cellReferenceRegex: Regex = "([A-Z])([0-9])".r
 
   def shiftRowNums(formula: String, shiftFactor: Int): String = {

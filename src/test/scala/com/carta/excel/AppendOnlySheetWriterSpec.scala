@@ -977,11 +977,11 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     val expectedWorkbook = new XSSFWorkbook(expectedPath)
     expectedWorkbook.write(expectedStream)
 
-    val sheetWriter = new AppendOnlySheetWriter(
-      templateSheet,
-      outputWorkbook,
-      schema,
-      mutable.Map.empty
+    val sheetWriter = AppendOnlySheetWriter(
+      templateSheet = templateSheet,
+      outputWorkbook = outputWorkbook,
+      schema = schema,
+      cellStyleCache = mutable.Map.empty
     )
 
     val repeatedData = List("a", "b", "c").map(value => DataRow().addCell("repeated", value))
