@@ -172,8 +172,27 @@ Doing so results in the final output sheet:
 ![output](.readme_resources/output.png)
 
 # Supported Cell Types
-Currently, Exscalabur supports copying cells containing numeric, boolean, and string values. 
-Cells containing formulas and formula errors will not copied from the template to the output sheet.
+
+## Literal values
+Currently, Exscalabur supports copying cells containing numeric, boolean, and string values.
+
+## Formulas
+Exscalabur currently does not support copying formulas that reference cells on repeated rows.
+
+If a formula contains a reference to a cell, there cannot be any repeated rows between that cell, and the formula cell itself
+
+Formulas must also reference cells on the same sheet.
+
+An example of a legal formula is:
+
+![formula usage](.readme_resources/formula_usage.png)
+
+These formulas would not be considered legal if they contained a reference to a cell before row 31, or after 36.
+ 
+Exscalabur supports copying cell formulas if all referenced cells in the formula are on the same sheet, and
+there are no repeated rows between any cell references and the formula itself. Formulas may not behave as expected if this requirement is not met.
+
+Cells formula errors will not copied from the template to the output sheet.
 
 # Roadmap
 * Add support for Exscalabur to copy formulas on single-substitution template cells.

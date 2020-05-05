@@ -12,9 +12,9 @@
  */
 package com.carta.excel
 
-import java.io.{File, FileInputStream, FileOutputStream}
+import java.io.{FileInputStream, FileOutputStream}
 
-import com.carta.exscalabur.{DataRow, Exscalabur}
+import com.carta.exscalabur.{DataCell, DataRow, Exscalabur}
 import com.carta.yaml.{DataType, ExcelType, YamlEntry}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -160,6 +160,40 @@ class ExscalaburSpec extends AnyFlatSpec with Matchers {
     exscalabur.exportToFile(filePath)
 
     val expectedWorkbookStream = getClass.getResourceAsStream("/excel/expected/seqRepRows.xlsx")
+    val actualWorkbookStream = new FileInputStream(filePath)
+    ExcelTestHelpers.assertEqualsWorkbooks(expectedWorkbookStream, actualWorkbookStream)
+  }
+
+  "Exscalabur" should "copy formula cells, shifting if needed" in {
+    val filePath = ExcelTestHelpers.createTempFile("sepRepRows").getAbsolutePath
+
+    val repeatedData1 = List("a", "b", "c").map(value => DataRow().addCell("repeated", value))
+    val staticData = List(
+      DataCell("static1", 1),
+      DataCell("static2", 2),
+      DataCell("static4", 3),
+      DataCell("static5", 4),
+    )
+
+    val schema = Map(
+      "$REP.repeated" -> YamlEntry(DataType.string, ExcelType.string),
+      "$KEY.static1" -> YamlEntry(DataType.long, ExcelType.number),
+      "$KEY.static2" -> YamlEntry(DataType.long, ExcelType.number),
+      "$KEY.static4" -> YamlEntry(DataType.long, ExcelType.number),
+      "$KEY.static5" -> YamlEntry(DataType.long, ExcelType.number),
+    )
+
+    val templatePath = getClass.getResource("/excel/templates/formulaSpec.xlsx").getFile
+
+    val exscalabur = Exscalabur(List(templatePath), schema, 100)
+    val sheetWriter = exscalabur.getAppendOnlySheetWriter("Sheet1")
+
+    sheetWriter.writeRepeatedData(repeatedData1)
+    sheetWriter.writeStaticData(staticData)
+
+    exscalabur.exportToFile(filePath)
+
+    val expectedWorkbookStream = getClass.getResourceAsStream("/excel/expected/formulaSpec.xlsx")
     val actualWorkbookStream = new FileInputStream(filePath)
     ExcelTestHelpers.assertEqualsWorkbooks(expectedWorkbookStream, actualWorkbookStream)
   }

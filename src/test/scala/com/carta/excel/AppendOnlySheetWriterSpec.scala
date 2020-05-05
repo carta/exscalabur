@@ -957,6 +957,49 @@ class AppendOnlySheetWriterSpec extends AnyFlatSpec with Matchers {
     ExcelTestHelpers.assertEqualsWorkbooks(expectedInputStream, actualInputStream)
   }
 
+  "SheetWriter" should "shift formula cells on copy if repeated rows were written" in {
+    val outputWorkbook = new SXSSFWorkbook(100)
+    val expectedStream = new ByteArrayOutputStream()
+    val actualStream = new ByteArrayOutputStream()
+
+    val schema = Map(
+      "$REP.repeated" -> YamlEntry(DataType.string, ExcelType.string),
+      "$KEY.static1" -> YamlEntry(DataType.long, ExcelType.number),
+      "$KEY.static2" -> YamlEntry(DataType.long, ExcelType.number),
+      "$KEY.static4" -> YamlEntry(DataType.long, ExcelType.number),
+      "$KEY.static5" -> YamlEntry(DataType.long, ExcelType.number),
+    )
+
+    val templatePath = getClass.getResource("/excel/templates/formulaSpec.xlsx").getFile
+    val templateSheet = new XSSFWorkbook(templatePath).getSheetAt(0)
+
+    val expectedPath = getClass.getResource("/excel/expected/formulaSpec.xlsx").getFile
+    val expectedWorkbook = new XSSFWorkbook(expectedPath)
+    expectedWorkbook.write(expectedStream)
+
+    val sheetWriter = AppendOnlySheetWriter(
+      templateSheet = templateSheet,
+      outputWorkbook = outputWorkbook,
+      schema = schema,
+      cellStyleCache = mutable.Map.empty
+    )
+
+    val repeatedData = List("a", "b", "c").map(value => DataRow().addCell("repeated", value))
+    val staticData = List(
+      DataCell("static1", 1),
+      DataCell("static2", 2),
+      DataCell("static4", 3),
+      DataCell("static5", 4),
+    )
+    sheetWriter.writeRepeatedData(repeatedData)
+    sheetWriter.writeStaticData(staticData)
+    outputWorkbook.write(actualStream)
+
+    val expectedInputStream = new ByteArrayInputStream(expectedStream.toByteArray)
+    val actualInputStream = new ByteArrayInputStream(actualStream.toByteArray)
+    ExcelTestHelpers.assertEqualsWorkbooks(expectedInputStream, actualInputStream)
+  }
+
   private def getRandomCell(templateWorkbook: XSSFWorkbook, row: XSSFRow, index: Int): XSSFCell = {
     val style = ExcelTestHelpers.randomCellStyle(templateWorkbook)
     val cell = row.createCell(index)

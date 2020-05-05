@@ -21,3 +21,15 @@ $REP.school:
 $REP.numStudents:
   dataType: "long"
   excelType: "number"
+
+$KEY.value1:
+  dataType: "double"
+  excelType: "number"
+
+$KEY.value2:
+  dataType: "double"
+  excelType: "number"
+
+$KEY.value3:
+  dataType: "double"
+  excelType: "number"

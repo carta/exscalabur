@@ -1,3 +1,15 @@
+/**
+ * Copyright 2018 eShares, Inc. dba Carta, Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.example.Main;
 
 import com.carta.compat.java.excel.AppendOnlySheetWriter;
@@ -68,6 +80,10 @@ class App {
         final List<DataCell> staticData = Lists.newArrayList();
         staticData.add(new DataCell("project", "exscalabur demo"));
 
+        final List<DataCell> staticData2 = Lists.newArrayList();
+        staticData2.add(new DataCell("value1", 12.34));
+        staticData2.add(new DataCell("value2", 11.35));
+        staticData2.add(new DataCell("value3", 14.50));
 
         final AppendOnlySheetWriter sheetWriter = sword.getAppendOnlySheetWriter("Sheet1");
 
@@ -75,6 +91,7 @@ class App {
         sheetWriter.writeRepeatedData(peopleData1);
         sheetWriter.writeRepeatedData(peopleData2);
         sheetWriter.writeRepeatedData(schoolData);
+        sheetWriter.writeStaticData(staticData2);
 
         sword.exportToFile("./out.xlsx");
     }

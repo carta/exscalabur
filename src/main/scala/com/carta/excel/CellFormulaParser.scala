@@ -10,14 +10,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-name := "demo"
-version := "0.1"
-scalaVersion := "2.12.8"
-organization := "com.carta"
-organizationName := "carta"
+package com.carta.excel
 
-resolvers += Resolver.mavenLocal
+import scala.util.matching.Regex
 
-libraryDependencies ++= Seq(
-  "com.carta" %% "exscalabur" % "0.0.12"
-)
+class CellFormulaParser {
+  val cellReferenceRegex: Regex = "([A-Z])([0-9])".r
+
+  def shiftRowNums(formula: String, shiftFactor: Int): String = {
+    val cellRefs = cellReferenceRegex.findAllIn(formula)
+      .toList
+      .mapConserve {
+        case cellReferenceRegex(row, col) => f"$row${col.toInt + shiftFactor}"
+        case token: String => token
+      }
+
+    formula.split(cellReferenceRegex.toString)
+      .zipAll(cellRefs, "", "")
+      .map { case (a, b) => a + b }
+      .mkString
+  }
+}

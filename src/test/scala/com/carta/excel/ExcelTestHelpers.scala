@@ -189,7 +189,8 @@ object ExcelTestHelpers extends Matchers {
 
   def assertEqualsRows(expectedRowOpt: Option[XSSFRow], actualRowOpt: Option[XSSFRow]): Assertion = {
     expectedRowOpt match {
-      case None => assert(actualRowOpt.isEmpty)
+      case None =>
+        actualRowOpt.map(row => row.getLastCellNum shouldBe -1).getOrElse(succeed)
 
       case Some(expectedRow) =>
         assert(actualRowOpt.isDefined, s"Row ${expectedRow.getRowNum} in sheet ${expectedRow.getSheet.getSheetName}  should not be empty")
@@ -247,7 +248,9 @@ object ExcelTestHelpers extends Matchers {
             assert(expectedCell.getStringCellValue == actualCell.getStringCellValue, errorLocation(actualCell))
           case CellType.BOOLEAN =>
             assert(expectedCell.getBooleanCellValue == actualCell.getBooleanCellValue, errorLocation(actualCell))
-          case CellType.BLANK => assert(true)
+          case CellType.FORMULA =>
+            assert(expectedCell.getCellFormula == actualCell.getCellFormula, errorLocation(actualCell))
+          case CellType.BLANK => succeed
           case _ => fail(s"Attempting to assert equality of unsupported cell value type")
         }
     }
