@@ -33,3 +33,27 @@ $KEY.value2:
 $KEY.value3:
   dataType: "double"
   excelType: "number"
+
+$REC.dateHeader:
+  dataType: "string"
+  excelType: "string"
+
+$REC.peerCloseHeader:
+  dataType: "string"
+  excelType: "string"
+
+$REC.peerChangeHeader:
+  dataType: "string"
+  excelType: "string"
+
+$REC.date:
+  dataType: "date"
+  excelType: "date"
+
+$REC.peerClose:
+  dataType: "double"
+  excelType: "number"
+
+$REC.peerChange:
+  dataType: "double"
+  excelType: "number"

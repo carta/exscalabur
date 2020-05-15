@@ -10,6 +10,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import java.time.LocalDate
+
 import com.carta.exscalabur.{DataCell, DataRow, Exscalabur}
 import com.carta.yaml.YamlReader
 
@@ -43,6 +45,53 @@ object Main {
       DataRow().addCell("school", "Well Known School").addCell("numStudents", 30000)
     )
 
+    val recordHeaders: List[DataRecord] = List(
+      DataRecord()
+        .addCell("dateHeader", "Date")
+        .addRecord(List(
+          DataCell("peerCloseHeader", "AAPL close"),
+          DataCell("peerChangeHeader", "AAPL")
+          ))
+        .addRecord(List(
+          DataCell("peerCloseHeader", "MSFT close"),
+          DataCell("peerChangeHeader", "MSFT")
+          ))
+        .addRecord(List(
+          DataCell("peerCloseHeader", "GOOG close"),
+          DataCell("peerChangeHeader", "GOOG")
+          ))
+
+    val recordData: List[DataRecord] = List(
+      DataRecord()
+        .addCell("date", LocalDate.of(2020, MAY, 1))
+        .addRecord(List(
+          DataCell("peerClose", 1.08),
+          DataCell("peerChange", 0.01)
+          ))
+        .addRecord(List(
+          DataCell("peerClose", 2.31),
+          DataCell("peerChange", -0.01)
+          ))
+        .addRecord(List(
+          DataCell("peerClose", 4.25),
+          DataCell("peerChange", 0.02)
+          )),
+      DataRecord()
+        .addCell("date", LocalDate.of(2020, JUNE, 1))
+        .addRecord(List(
+          DataCell("peerClose", 1.18),
+          DataCell("peerChange", 0.03)
+          ))
+        .addRecord(List(
+          DataCell("peerClose", 2.41),
+          DataCell("peerChange", 0.13)
+          ))
+        .addRecord(List(
+          DataCell("peerClose", 4.55),
+          DataCell("peerChange", -0.03)
+          ))
+      )
+
     val staticData1 = List(DataCell("project", "exscalabur demo"))
 
     val staticData2 = List(
@@ -56,8 +105,8 @@ object Main {
     sheetWriter.writeRepeatedData(peopleData1)
     sheetWriter.writeRepeatedData(peopleData2)
     sheetWriter.writeRepeatedData(schoolData)
+    sheetWriter.writeRecordData(recordData)
     sheetWriter.writeStaticData(staticData2)
-
 
     sword.exportToFile("./out.xlsx")
   }
