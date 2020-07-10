@@ -11,5 +11,5 @@ repositories {
 }
 
 dependencies {
-    compile group: 'com.carta', name: 'exscalabur_2.12', version: '0.0.12'
+    compile group: 'com.carta', name: 'exscalabur_2.12', version: '0.1.0'
 }
