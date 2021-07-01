@@ -1,0 +1,22 @@
+name: Snyk monitor - scala
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+jobs:
+  snyk-monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/scala@master
+        env:
+          COMMAND: ""
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+          CLOUDSMITH_PIP: ${{ secrets.CLOUDSMITH_PIP }}
+          CLOUDSMITH_PIP_TEST: ${{ secrets.CLOUDSMITH_PIP_TEST }}
+        with:
+          command: monitor --org=transaction-framework --project-name=exscalabur_scala 
