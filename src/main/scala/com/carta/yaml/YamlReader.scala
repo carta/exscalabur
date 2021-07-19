@@ -41,7 +41,7 @@ class YamlReader(private val mapper: ObjectMapper) {
     }
     else {
       val yamlMap: Map[String, EntryBuilder] = mapper.readValue(content, parseTypeRef)
-      yamlMap.mapValues(entryBuilder => entryBuilder.build())
+      yamlMap.mapValues(entryBuilder => entryBuilder.build()).toMap
     }
   }
 }

@@ -50,6 +50,7 @@ object ExtendedSheet {
       .getShapes.asScala
       .filter(_.isInstanceOf[XSSFPicture])
       .map(_.asInstanceOf[XSSFPicture])
+      .toSeq
   }
 
 }

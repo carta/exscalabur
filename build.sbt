@@ -16,7 +16,11 @@ import sbt.Keys.libraryDependencies
 organization := "com.carta"
 organizationName := "carta"
 
-scalaVersion := "2.12.8"
+val currentScalaVersion = "2.12.14"
+val scala213Version = "2.13.6"
+
+scalaVersion := currentScalaVersion
+crossScalaVersions := Seq(currentScalaVersion, scala213Version)
 
 lazy val isSnapshotRelease = sys.env.getOrElse("isSnapshot", "false").toBoolean
 publishConfiguration := publishConfiguration.value.withOverwrite(isSnapshotRelease)

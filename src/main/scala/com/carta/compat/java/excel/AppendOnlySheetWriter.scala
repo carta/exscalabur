@@ -19,11 +19,11 @@ import scala.collection.JavaConverters._
 
 class AppendOnlySheetWriter(scalaSheetWriter: com.carta.excel.AppendOnlySheetWriter) {
   def writeStaticData(data: java.util.List[DataCell]): Unit = {
-    scalaSheetWriter.writeStaticData(data.asScala.map(_.asScala))
+    scalaSheetWriter.writeStaticData(data.asScala.map(_.asScala).toSeq)
   }
 
   def writeRepeatedData(dataRows: java.util.List[DataRow]): Unit = {
-    scalaSheetWriter.writeRepeatedData(dataRows.asScala.map(_.asScala))
+    scalaSheetWriter.writeRepeatedData(dataRows.asScala.map(_.asScala).toSeq)
   }
 
   def copyPictures(): Unit = {
