@@ -11,13 +11,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
-      - name: Run Snyk to check for vulnerabilities
-        uses: snyk/actions/scala@master
+      - name: Install dependencies
+        run: ""
         env:
-          COMMAND: ""
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
           CLOUDSMITH_PIP: ${{ secrets.CLOUDSMITH_PIP }}
           CLOUDSMITH_PIP_TEST: ${{ secrets.CLOUDSMITH_PIP_TEST }}
           CLOUDSMITH_MAVEN_RELEASES: ${{ secrets.CLOUDSMITH_MAVEN_RELEASES }}
-        with:
-          command: monitor --org=transaction-framework --project-name=exscalabur_scala 
+      - uses: snyk/actions/setup@master
+      - name: Snyk Monitor
+        run: snyk monitor --org=transaction-framework --project-name=exscalabur_scala 
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
