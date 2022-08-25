@@ -35,7 +35,7 @@ Any cell styling/cell borders made to the template will appear in the generated 
 
 An example template sheet:
 
-![template](.readme_resources/template.png)
+![template](.readme_resources/screenshots/template.png)
 
 ## Template Keys
 A template key is a cell with the value prefixed by `$KEY.` or `$REP.`
@@ -70,27 +70,27 @@ For the example template Excel file above, the following is valid `schema` defin
 
 ```yaml
 $KEY.fname:
-  columnType: "string"
+  dataType: "string"
   excelType: "string"
 
 $KEY.lname:
-  columnType: "string"
+  dataType: "string"
   excelType: "string"
 
 $KEY.conclusion:
-  columnType: "string"
+  dataType: "string"
   excelType: "string"
 
 $REP.animal:
-  columnType: "string"
+  dataType: "string"
   excelType: "string"
 
 $REP.weight:
-  columnType: "double"
-  excelType: "double"
+  dataType: "double"
+  excelType: "number"
   
 $REP.element:
-  columnType: "string"
+  dataType: "string"
   excelType: "string"
 ```
 
@@ -169,7 +169,7 @@ And write to the output file: `exscalabur.exportToFile(outputPath)`
 
 Doing so results in the final output sheet:
 
-![output](.readme_resources/output.png)
+![output](.readme_resources/screenshots/output.png)
 
 # Supported Cell Types
 
@@ -185,7 +185,7 @@ Formulas must also reference cells on the same sheet.
 
 An example of a legal formula is:
 
-![formula usage](.readme_resources/formula_usage.png)
+![formula usage](.readme_resources/screenshots/formula_usage.png)
 
 These formulas would not be considered legal if they contained a reference to a cell before row 31, or after 36.
  

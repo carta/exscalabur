@@ -1,0 +1,24 @@
+$KEY.fname:
+    dataType: "string"
+    excelType: "string"
+
+$KEY.lname:
+    dataType: "string"
+    excelType: "string"
+
+$KEY.conclusion:
+  dataType: "string"
+  excelType: "string"
+
+$REP.animal:
+  dataType: "string"
+  excelType: "string"
+
+$REP.weight:
+  dataType: "double"
+  excelType: "number"
+  
+$REP.element:
+  dataType: "string"
+  excelType: "string"
+
