@@ -1,7 +1,8 @@
 [![Scala version](https://img.shields.io/badge/scala-2.12.8-brightgreen.svg)](https://www.scala-lang.org/download/2.12.8.html)
 
 # Exscalabur
-Exscalabur is a Scala library for creating Excel files from data and a template. Exscalabur allows excel layout and formatting to be specified by excel templates, allowing anyone with basic excel knowledge to design and modify templates.
+Exscalabur is a Scala library for creating Excel files from data and a template. Exscalabur allows excel layout and formatting to be specified by excel templates, allowing anyone with basic excel knowledge to design and modify templates. 
+It is mainly used for Financial Reporting in the DSR repo.
 
 ## Development
 
